@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8dd8ef"/>
+      <stop offset="60%" stop-color="#2a8ab5"/>
+      <stop offset="100%" stop-color="#0e4a68"/>
+    </linearGradient>
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8dcc8"/>
+      <stop offset="100%" stop-color="#c8b898"/>
+    </linearGradient>
+  </defs>
+  <!-- Tank background -->
+  <rect x="4" y="4" width="56" height="56" rx="6" fill="url(#water)"/>
+  <!-- Sand -->
+  <path d="M4 48 Q16 45 32 47 Q48 49 60 46 L60 60 Q60 60 56 60 L8 60 Q4 60 4 56 Z" fill="url(#sand)"/>
+  <!-- Water plant -->
+  <path d="M14 48 Q12 38 15 30 Q13 34 11 40" fill="none" stroke="#3a8a50" stroke-width="2" stroke-linecap="round"/>
+  <path d="M14 48 Q16 36 13 28" fill="none" stroke="#4a9a5a" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M16 47 Q18 40 15 33" fill="none" stroke="#5aaa65" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Shrimp body (bee shrimp) -->
+  <g transform="translate(38,34) scale(0.9)">
+    <!-- Body curve -->
+    <path d="M-10,2 Q-8,-3 -4,-5 Q0,-6 4,-5 Q8,-3 10,0 Q8,3 4,4 Q0,5 -4,4 Q-8,3 -10,2Z" fill="#d43030"/>
+    <!-- White bands -->
+    <rect x="-7" y="-5" width="3" height="9" rx="1" fill="#f0e8e0" opacity="0.85"/>
+    <rect x="0" y="-5.5" width="3" height="10" rx="1" fill="#f0e8e0" opacity="0.85"/>
+    <rect x="7" y="-4" width="2.5" height="7.5" rx="1" fill="#f0e8e0" opacity="0.8"/>
+    <!-- Eye -->
+    <circle cx="10.5" cy="-2.5" r="1.2" fill="#111"/>
+    <circle cx="11" cy="-3" r="0.4" fill="#fff"/>
+    <!-- Antennae -->
+    <path d="M11,-3 Q15,-8 18,-10" fill="none" stroke="#b85040" stroke-width="0.6" stroke-linecap="round"/>
+    <path d="M11,-2 Q14,-5 17,-6" fill="none" stroke="#b85040" stroke-width="0.5" stroke-linecap="round"/>
+    <!-- Tail fan -->
+    <path d="M-10,2 Q-14,0 -15,-1 Q-13,1 -10,2" fill="#c03828" opacity="0.7"/>
+    <path d="M-10,2 Q-14,3 -15,5 Q-13,3 -10,2" fill="#c03828" opacity="0.6"/>
+  </g>
+  <!-- Light rays -->
+  <line x1="22" y1="4" x2="18" y2="28" stroke="rgba(255,255,255,0.15)" stroke-width="3"/>
+  <line x1="40" y1="4" x2="38" y2="32" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
+  <!-- Bubble -->
+  <circle cx="48" cy="18" r="2.5" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="0.7"/>
+  <circle cx="47.3" cy="17.3" r="0.7" fill="rgba(255,255,255,0.5)"/>
+  <!-- Tank frame -->
+  <rect x="4" y="4" width="56" height="56" rx="6" fill="none" stroke="#1a3a50" stroke-width="2.5" opacity="0.3"/>
+</svg>
