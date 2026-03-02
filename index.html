@@ -99,12 +99,15 @@
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v1.8.0</div>
+        <div class="sub-info" id="verInfo">v1.9.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo">
-          <div><span class="lb">赤白ビー：</span><span class="v" id="beeS">ツマツマ中</span></div>
-          <div><span class="lb">透明エビ：</span><span class="v" id="clrS">水草の影</span></div>
+          <div><span class="lb">ビー①：</span><span class="v" id="s0">ツマツマ中</span></div>
+          <div><span class="lb">ビー②：</span><span class="v" id="s1">ツマツマ中</span></div>
+          <div><span class="lb">ビー③：</span><span class="v" id="s2">ツマツマ中</span></div>
+          <div><span class="lb">透明①：</span><span class="v" id="s3">水草の影</span></div>
+          <div><span class="lb">透明②：</span><span class="v" id="s4">水草の影</span></div>
         </div>
         <div class="sub-info" style="text-align:right" id="jstClock"></div>
       </div>
@@ -587,8 +590,7 @@ function initTerrain(){
     parts.push({x:rand(0,W),y:rand(50,SAND_Y-20),vx:rand(-1.5,1.5),vy:rand(-0.8,0.8),
       r:rand(0.3,1.3),alpha:rand(0.03,0.12),ph:rand(0,Math.PI*2)});
   }
-  if(shrimpsReady){beeShrimp.x=clamp(beeShrimp.x,20,W-20);beeShrimp.y=clamp(beeShrimp.y,60,SAND_Y+2);}
-  if(shrimpsReady){clearShrimp.x=clamp(clearShrimp.x,20,W-20);clearShrimp.y=clamp(clearShrimp.y,60,SAND_Y+2);}
+  if(shrimpsReady){for(const s of shrimps){s.x=clamp(s.x,20,W-20);s.y=clamp(s.y,60,SAND_Y+2);}}
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
@@ -794,7 +796,7 @@ class BeeShrimp extends Shrimp{
     else if(r<0.56){this.state=ST.IDLE;this.sd=rand(2,5);}
     else if(r<0.78){this.state=ST.SWIM;this.pickSwimT();this.sd=rand(5,12);}
     else{this.state=ST.FLOAT;this.pickFloatT();this.sd=rand(6,15);}
-    this.st=0;document.getElementById('beeS').textContent=SNB[this.state];
+    this.st=0;if(this.uiId)document.getElementById(this.uiId).textContent=SNB[this.state];
   }
   draw(ctx){
     ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing,1);
@@ -885,10 +887,10 @@ class ClearShrimp extends Shrimp{
     else if(r<.60){this.state=ST.FOLLOW;this.sd=rand(4,8);}
     else if(r<.82){this.state=ST.SWIM;this.pickSwimT();this.sd=rand(5,12);}
     else{this.state=ST.FLOAT;this.pickFloatT();this.sd=rand(6,15);}
-    this.st=0;document.getElementById('clrS').textContent=SNC[this.state];
+    this.st=0;if(this.uiId)document.getElementById(this.uiId).textContent=SNC[this.state];
   }
   update(dt){super.update(dt);
-    if(this.state===ST.FOLLOW&&beeShrimp){const dx=beeShrimp.x-30*this.facing-this.x,dy=beeShrimp.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(this.state===ST.FOLLOW&&shrimps.length>0){const leader=shrimps[0];const dx=leader.x-30*this.facing-this.x,dy=leader.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
       if(d>20){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*.7*dt;this.y+=(dy/d)*this.speed*.25*dt;}}
   }
   draw(ctx){
@@ -950,9 +952,10 @@ class ClearShrimp extends Shrimp{
 // ============================================================
 //  CREATE
 // ============================================================
-const beeShrimp=new BeeShrimp();
-const clearShrimp=new ClearShrimp();
-beeShrimp.pickNewState();clearShrimp.pickNewState();
+const shrimps=[];
+for(let i=0;i<3;i++){const s=new BeeShrimp();s.uiId='s'+i;s.x=rand(W*0.15+i*W*0.2,W*0.25+i*W*0.2);shrimps.push(s);}
+for(let i=0;i<2;i++){const s=new ClearShrimp();s.uiId='s'+(3+i);s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
+for(const s of shrimps)s.pickNewState();
 shrimpsReady=true;
 
 // ============================================================
@@ -983,7 +986,7 @@ function render(now){
   wq=Math.max(0,wq-dt*0.025);
   document.getElementById('wBar').style.width=wq+'%';
 
-  beeShrimp.update(dt);clearShrimp.update(dt);
+  for(const s of shrimps)s.update(dt);
   updateParts(dt);
   for(const f of foods)f.update(dt);
   for(let i=foods.length-1;i>=0;i--)if(foods[i].alpha<=0)foods.splice(i,1);
@@ -1002,7 +1005,7 @@ function render(now){
   for(const f of foods)f.draw(X);
   for(const s of shells)s.draw(X);
 
-  clearShrimp.draw(X);beeShrimp.draw(X);
+  for(const s of shrimps)s.draw(X);
 
   for(let i=1;i<plants.length;i+=2)plants[i].draw(X,time);
 
@@ -1020,8 +1023,12 @@ function render(now){
 document.getElementById('feedBtn').addEventListener('click',()=>{
   for(let i=0;i<randI(3,5);i++)foods.push(new Food(rand(60,W-60)));
   notify('🍤 餌を落としました');
-  setTimeout(()=>{beeShrimp.state=ST.EAT;beeShrimp.st=0;beeShrimp.sd=rand(6,12);document.getElementById('beeS').textContent=SNB[ST.EAT];},600);
-  setTimeout(()=>{clearShrimp.state=ST.EAT;clearShrimp.st=0;clearShrimp.sd=rand(6,12);document.getElementById('clrS').textContent=SNC[ST.EAT];},2200);
+  shrimps.forEach((s,i)=>{
+    setTimeout(()=>{s.state=ST.EAT;s.st=0;s.sd=rand(6,12);
+      const names=(s instanceof BeeShrimp)?SNB:SNC;
+      if(s.uiId)document.getElementById(s.uiId).textContent=names[ST.EAT];
+    },600+i*400);
+  });
 });
 document.getElementById('cleanBtn').addEventListener('click',()=>{
   wq=Math.min(100,wq+30);notify('💧 水換え完了');
