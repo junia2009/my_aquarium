@@ -93,8 +93,7 @@
     <div id="bottomBar">
       <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
       <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
-      <button class="btn" id="ziBtn"><span class="ic">🔍</span>近づく</button>
-      <button class="btn" id="zoBtn"><span class="ic">🔭</span>離れる</button>
+
     </div>
   </div>
   <div id="notif"></div>
@@ -109,7 +108,6 @@ const W=400,H=780;
 C.width=W;C.height=H;
 
 let time=0,lt=performance.now();
-const cam={x:0,y:0,z:1,tz:1,tx:0,ty:0};
 let wq=100;
 
 // ─── Helpers ───
@@ -905,10 +903,7 @@ function render(now){
   for(const s of shells)s.update(dt);
   for(let i=shells.length-1;i>=0;i--)if(shells[i].alpha<=0)shells.splice(i,1);
 
-  cam.z=lerp(cam.z,cam.tz,dt*2.5);cam.x=lerp(cam.x,cam.tx,dt*2.5);cam.y=lerp(cam.y,cam.ty,dt*2.5);
-
   X.save();
-  X.translate(W/2,H/2);X.scale(cam.z,cam.z);X.translate(-W/2+cam.x,-H/2+cam.y);
 
   drawBG(X);
   drawSurface(X,time);
@@ -945,38 +940,7 @@ document.getElementById('cleanBtn').addEventListener('click',()=>{
   wq=Math.min(100,wq+30);notify('💧 水換え完了');
   for(let i=0;i<6;i++)setTimeout(()=>spawnBub(rand(60,W-60),rand(450,600)),i*150);
 });
-document.getElementById('ziBtn').addEventListener('click',()=>{cam.tz=Math.min(3,cam.tz+0.35);});
-document.getElementById('zoBtn').addEventListener('click',()=>{cam.tz=Math.max(0.6,cam.tz-0.35);});
 
-// Drag / pan (mouse)
-let drag=false,dsx=0,dsy=0;
-C.addEventListener('mousedown',e=>{drag=true;dsx=e.clientX;dsy=e.clientY;});
-window.addEventListener('mousemove',e=>{if(!drag)return;const dx=(e.clientX-dsx)/cam.z,dy=(e.clientY-dsy)/cam.z;cam.tx=clamp(cam.tx+dx,-150,150);cam.ty=clamp(cam.ty+dy,-180,180);dsx=e.clientX;dsy=e.clientY;});
-window.addEventListener('mouseup',()=>{drag=false;});
-C.addEventListener('wheel',e=>{e.preventDefault();cam.tz=clamp(cam.tz+(e.deltaY>0?-0.08:0.08),0.6,3);},{passive:false});
-
-// Touch support (drag + pinch)
-let touches=[],pinchD=0;
-C.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  touches=[...e.touches];
-  if(touches.length===2){pinchD=Math.hypot(touches[0].clientX-touches[1].clientX,touches[0].clientY-touches[1].clientY);}
-  else if(touches.length===1){dsx=touches[0].clientX;dsy=touches[0].clientY;drag=true;}
-},{passive:false});
-C.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  const ts=[...e.touches];
-  if(ts.length===2&&touches.length===2){
-    const nd=Math.hypot(ts[0].clientX-ts[1].clientX,ts[0].clientY-ts[1].clientY);
-    cam.tz=clamp(cam.tz+(nd-pinchD)*0.004,0.6,3);pinchD=nd;
-  }else if(ts.length===1&&drag){
-    const dx=(ts[0].clientX-dsx)/cam.z,dy=(ts[0].clientY-dsy)/cam.z;
-    cam.tx=clamp(cam.tx+dx,-150,150);cam.ty=clamp(cam.ty+dy,-180,180);
-    dsx=ts[0].clientX;dsy=ts[0].clientY;
-  }
-  touches=ts;
-},{passive:false});
-C.addEventListener('touchend',e=>{touches=[...e.touches];drag=false;},{passive:false});
 
 // ============================================================
 notify('🌊 癒し水槽へようこそ',3500);
