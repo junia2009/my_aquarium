@@ -79,17 +79,6 @@
     max-width:80%;
   }
   #notif.show{opacity:1}
-  #infoBar{
-    position:absolute;bottom:0;left:0;right:0;
-    display:flex;justify-content:space-between;align-items:flex-end;
-    padding:0 10px 2px;
-    pointer-events:none;
-    z-index:5;
-  }
-  #infoBar .inf{
-    color:rgba(150,195,230,0.4);
-    font-size:9px;letter-spacing:0.02em;
-  }
 </style>
 </head>
 <body>
@@ -100,10 +89,12 @@
       <div class="panel">
         <div><span class="lb">水質</span></div>
         <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
+        <div style="margin-top:4px"><span class="lb" id="verInfo">v1.6.0</span></div>
       </div>
       <div class="panel" id="shrimpInfo">
         <div><span class="lb">赤白ビー：</span><span class="v" id="beeS">ツマツマ中</span></div>
         <div><span class="lb">透明エビ：</span><span class="v" id="clrS">水草の影</span></div>
+        <div style="margin-top:4px"><span class="lb">🕐 </span><span class="v" id="jstClock"></span></div>
       </div>
     </div>
     <div id="bottomBar">
@@ -114,10 +105,6 @@
     </div>
   </div>
   <div id="notif"></div>
-  <div id="infoBar">
-    <span class="inf" id="verInfo">v1.6.0</span>
-    <span class="inf" id="jstClock"></span>
-  </div>
 </div>
 
 <script>
