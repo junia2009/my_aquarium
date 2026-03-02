@@ -152,6 +152,7 @@ setInterval(updateClock,1000);
 
 let time=0,lt=performance.now();
 let wq=100;
+let shrimpsReady=false;
 
 // ─── Helpers ───
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -585,8 +586,8 @@ function initTerrain(){
     parts.push({x:rand(0,W),y:rand(50,SAND_Y-20),vx:rand(-1.5,1.5),vy:rand(-0.8,0.8),
       r:rand(0.3,1.3),alpha:rand(0.03,0.12),ph:rand(0,Math.PI*2)});
   }
-  if(typeof beeShrimp!=='undefined'){beeShrimp.x=clamp(beeShrimp.x,20,W-20);beeShrimp.y=clamp(beeShrimp.y,60,SAND_Y+2);}
-  if(typeof clearShrimp!=='undefined'){clearShrimp.x=clamp(clearShrimp.x,20,W-20);clearShrimp.y=clamp(clearShrimp.y,60,SAND_Y+2);}
+  if(shrimpsReady){beeShrimp.x=clamp(beeShrimp.x,20,W-20);beeShrimp.y=clamp(beeShrimp.y,60,SAND_Y+2);}
+  if(shrimpsReady){clearShrimp.x=clamp(clearShrimp.x,20,W-20);clearShrimp.y=clamp(clearShrimp.y,60,SAND_Y+2);}
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
@@ -951,6 +952,7 @@ class ClearShrimp extends Shrimp{
 const beeShrimp=new BeeShrimp();
 const clearShrimp=new ClearShrimp();
 beeShrimp.pickNewState();clearShrimp.pickNewState();
+shrimpsReady=true;
 
 // ============================================================
 //  GLASS
