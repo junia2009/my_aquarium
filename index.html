@@ -99,7 +99,7 @@
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v2.0.0</div>
+        <div class="sub-info" id="verInfo">v2.1.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo">
@@ -234,39 +234,50 @@ function updateCaustics(t){
 //  BACKGROUND — deep gradient with depth haze
 // ============================================================
 function drawBG(ctx){
+  // Beer-Lambert inspired water absorption (14+ stops)
   const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0.00,'#8dcde5');
-  g.addColorStop(0.03,'#72bdd8');
-  g.addColorStop(0.08,'#5aadce');
-  g.addColorStop(0.18,'#3e94b8');
-  g.addColorStop(0.35,'#2d7da0');
-  g.addColorStop(0.55,'#1f6585');
-  g.addColorStop(0.75,'#174e6a');
-  g.addColorStop(1.00,'#102a42');
+  g.addColorStop(0.00,'#c2e8f4');g.addColorStop(0.02,'#a8ddef');
+  g.addColorStop(0.05,'#8dd2e8');g.addColorStop(0.10,'#6ec3dc');
+  g.addColorStop(0.16,'#52b4d2');g.addColorStop(0.24,'#3ea4c6');
+  g.addColorStop(0.33,'#2e92b8');g.addColorStop(0.43,'#2280a8');
+  g.addColorStop(0.54,'#196f96');g.addColorStop(0.65,'#125e84');
+  g.addColorStop(0.76,'#0d4e70');g.addColorStop(0.87,'#093e5c');
+  g.addColorStop(0.95,'#063048');g.addColorStop(1.00,'#042638');
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 
-  // Subtle depth-varying color shift (time-animated)
-  const shift=Math.sin(time*0.08)*0.008+0.015;
-  for(let i=0;i<8;i++){
-    const y=H*0.25+i*50;
-    ctx.globalAlpha=shift+i*0.004;
-    ctx.fillStyle='#071e30';
-    ctx.fillRect(0,y,W,40);
-  }
-  ctx.globalAlpha=1;
+  // Warm sunlight pool (upper center, animated)
+  ctx.save();ctx.globalCompositeOperation='screen';
+  ctx.globalAlpha=0.05+Math.sin(time*0.12)*0.008;
+  const lg=ctx.createRadialGradient(W*0.42,-H*0.05,0,W*0.42,H*0.28,W*0.75);
+  lg.addColorStop(0,'rgba(255,228,185,1)');lg.addColorStop(0.2,'rgba(225,242,255,0.5)');
+  lg.addColorStop(0.55,'rgba(130,205,238,0.12)');lg.addColorStop(1,'rgba(60,140,180,0)');
+  ctx.fillStyle=lg;ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
 
-  // Animated turbidity (subtle suspended particle haze)
-  ctx.globalAlpha=0.018;
-  for(let y=0;y<H;y+=4){
-    for(let x=0;x<W;x+=4){
-      const n=fbm(x*0.012+time*0.02,y*0.008+time*0.008,3);
-      if(n>0.08){
-        ctx.fillStyle=n>0.15?'rgba(180,220,240,1)':'rgba(140,200,230,1)';
-        ctx.fillRect(x,y,3,3);
+  // Volumetric turbidity (2 layers, 8px resolution)
+  ctx.save();
+  for(let layer=0;layer<2;layer++){
+    const sp=(layer+1)*0.01,sc=(layer+1)*0.009,al=0.015-layer*0.004;
+    ctx.globalAlpha=al;
+    for(let y=0;y<H;y+=8){
+      for(let x=0;x<W;x+=8){
+        const n=fbm(x*sc+time*sp+layer*50,y*sc*0.6+time*sp*0.4,3);
+        if(n>0.05){
+          const b=Math.min(1,(n-0.05)*3.5);const dpt=y/H;
+          ctx.fillStyle=`rgba(${130+dpt*50|0},${195+dpt*25|0},${235+dpt*10|0},${b})`;
+          ctx.fillRect(x,y,7,7);
+        }
       }
     }
   }
-  ctx.globalAlpha=1;
+  ctx.globalAlpha=1;ctx.restore();
+
+  // Warm color temperature near surface
+  ctx.save();
+  const tg=ctx.createLinearGradient(0,0,0,H*0.35);
+  tg.addColorStop(0,'rgba(255,240,210,0.035)');tg.addColorStop(1,'rgba(255,240,210,0)');
+  ctx.fillStyle=tg;ctx.fillRect(0,0,W,H*0.35);
+  ctx.restore();
 }
 
 // ============================================================
@@ -306,11 +317,11 @@ function drawSurface(ctx,t){
     ctx.lineTo(W,0);ctx.closePath();ctx.fill();
   }
 
-  // 4) Surface wave strokes (3 layers, different frequencies)
+  // 4) Surface wave strokes (softer, more natural)
   const layers=[
-    {a:0.25,w:2.0,freq:0.022,sp:0.55,amp:3.5},
-    {a:0.15,w:1.2,freq:0.041,sp:0.85,amp:1.8},
-    {a:0.08,w:0.7,freq:0.073,sp:1.3,amp:0.9},
+    {a:0.12,w:1.4,freq:0.022,sp:0.55,amp:3.5},
+    {a:0.07,w:0.9,freq:0.041,sp:0.85,amp:1.8},
+    {a:0.035,w:0.5,freq:0.073,sp:1.3,amp:0.9},
   ];
   for(const L of layers){
     ctx.strokeStyle=`rgba(215,245,255,${L.a})`;
@@ -323,16 +334,16 @@ function drawSurface(ctx,t){
     ctx.stroke();
   }
 
-  // 5) Specular highlights on wave crests
+  // 5) Specular highlights on wave crests (soft, warm)
   ctx.globalCompositeOperation='screen';
   for(let x=0;x<W;x+=2){
     const y=waveY(x);
     const slope=(waveY(x+1)-waveY(x-1))*0.5;
-    if(slope<-0.15){ // crests facing light
-      const intensity=Math.min(1,Math.abs(slope)*2.5);
-      ctx.globalAlpha=intensity*0.12;
-      ctx.fillStyle='#e0f4ff';
-      ctx.fillRect(x,y-0.5,2,1.5);
+    if(slope<-0.2){
+      const intensity=Math.min(1,Math.abs(slope)*2.0);
+      ctx.globalAlpha=intensity*0.07;
+      ctx.fillStyle='#fff8f0';
+      ctx.fillRect(x-0.5,y-1,3,2.5);
     }
   }
   ctx.globalAlpha=1;
@@ -347,11 +358,11 @@ function drawSurface(ctx,t){
     const topW=6+Math.sin(t*0.18+phase)*2;
     const botW=35+Math.sin(t*0.15+phase)*15+i*5;
     const depth=H*0.72+Math.sin(t*0.1+phase)*30;
-    const baseA=0.018+Math.sin(t*0.14+phase)*0.008;
+    const baseA=0.028+Math.sin(t*0.14+phase)*0.012;
 
     // Multi-stop gradient for scattering falloff
     const rg=ctx.createLinearGradient(cx,SY,cx+botW*0.15,depth);
-    rg.addColorStop(0,`rgba(180,235,255,${baseA*2.5})`);
+    rg.addColorStop(0,`rgba(210,240,248,${baseA*3})`);
     rg.addColorStop(0.08,`rgba(170,228,250,${baseA*2})`);
     rg.addColorStop(0.25,`rgba(155,218,245,${baseA*1.3})`);
     rg.addColorStop(0.5,`rgba(140,210,240,${baseA*0.7})`);
@@ -418,12 +429,15 @@ function drawCaustics(ctx,t){
   updateCaustics(t);
   ctx.save();
   ctx.globalCompositeOperation='screen';
-  ctx.globalAlpha=0.35;
-  // Draw caustics on sand area
-  ctx.drawImage(caustC,0,0,caustW,caustH, 0,SAND_Y-40,W,H-SAND_Y+40);
-  // Lighter caustics on mid-water region
-  ctx.globalAlpha=0.08;
-  ctx.drawImage(caustC,0,0,caustW,caustH, 0,H*0.45,W,H*0.32);
+  // Strong caustics on sand
+  ctx.globalAlpha=0.42;
+  ctx.drawImage(caustC,0,0,caustW,caustH, 0,SAND_Y-55,W,H-SAND_Y+55);
+  // Medium caustics mid-water
+  ctx.globalAlpha=0.12;
+  ctx.drawImage(caustC,0,0,caustW,caustH, 0,H*0.38,W,H*0.38);
+  // Faint caustics upper water
+  ctx.globalAlpha=0.04;
+  ctx.drawImage(caustC,0,0,caustW,caustH, 0,H*0.06,W,H*0.35);
   ctx.restore();
 }
 
@@ -432,24 +446,39 @@ function drawCaustics(ctx,t){
 // ============================================================
 function drawHaze(ctx,t){
   ctx.save();
-  // Depth-dependent blue fog
-  const hg=ctx.createLinearGradient(0,H*0.3,0,H);
-  hg.addColorStop(0,'rgba(18,55,80,0)');
-  hg.addColorStop(0.5,'rgba(16,48,72,0.04)');
-  hg.addColorStop(1,'rgba(12,35,55,0.12)');
+  // Multi-layer depth fog
+  const hg=ctx.createLinearGradient(0,H*0.15,0,H);
+  hg.addColorStop(0,'rgba(10,40,62,0)');
+  hg.addColorStop(0.25,'rgba(12,44,68,0.015)');
+  hg.addColorStop(0.5,'rgba(12,42,65,0.04)');
+  hg.addColorStop(0.75,'rgba(10,36,56,0.08)');
+  hg.addColorStop(1,'rgba(6,28,44,0.16)');
   ctx.fillStyle=hg;
   ctx.fillRect(0,0,W,H);
 
-  // Animated light flicker (from surface refraction)
-  const flicker=0.015+Math.sin(t*1.2)*0.006+Math.sin(t*1.9)*0.004;
-  ctx.globalAlpha=flicker;
+  // Animated refracted light (main pool)
   ctx.globalCompositeOperation='screen';
-  const fg=ctx.createRadialGradient(W*0.5+Math.sin(t*0.3)*30,80,0,W*0.5,H*0.4,H*0.5);
-  fg.addColorStop(0,'rgba(200,240,255,1)');
-  fg.addColorStop(0.5,'rgba(160,220,245,0.5)');
-  fg.addColorStop(1,'rgba(160,220,245,0)');
+  const flickerA=0.02+Math.sin(t*0.8)*0.006+Math.sin(t*1.4)*0.004+Math.sin(t*2.3)*0.002;
+  ctx.globalAlpha=flickerA;
+  const fx=W*0.46+Math.sin(t*0.22)*25+Math.cos(t*0.17)*15;
+  const fy=H*0.1+Math.sin(t*0.18)*8;
+  const fg=ctx.createRadialGradient(fx,fy,0,fx,H*0.35,H*0.52);
+  fg.addColorStop(0,'rgba(215,248,255,1)');
+  fg.addColorStop(0.15,'rgba(190,238,252,0.7)');
+  fg.addColorStop(0.45,'rgba(145,218,242,0.3)');
+  fg.addColorStop(1,'rgba(100,190,228,0)');
   ctx.fillStyle=fg;
   ctx.fillRect(0,0,W,H);
+  // Secondary scattered light pools
+  ctx.globalAlpha=flickerA*0.35;
+  for(let i=0;i<3;i++){
+    const lx=W*(0.18+i*0.3)+Math.sin(t*0.13+i*2.1)*20;
+    const ly=H*(0.25+i*0.08)+Math.cos(t*0.11+i*1.7)*12;
+    const lr=H*0.18;
+    const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,lr);
+    lg.addColorStop(0,'rgba(200,242,255,0.6)');lg.addColorStop(1,'rgba(200,242,255,0)');
+    ctx.fillStyle=lg;ctx.fillRect(lx-lr,ly-lr,lr*2,lr*2);
+  }
   ctx.globalCompositeOperation='source-over';
   ctx.globalAlpha=1;
   ctx.restore();
@@ -461,9 +490,12 @@ function drawHaze(ctx,t){
 const sandGrains=[],pebbles=[];
 
 function drawSand(ctx,t){
-  const g=ctx.createLinearGradient(0,SAND_Y-6,0,H);
-  g.addColorStop(0,'#e8dece');g.addColorStop(0.12,'#e0d4c2');
-  g.addColorStop(0.45,'#d4c8b4');g.addColorStop(1,'#c4b8a4');
+  // Rich sand gradient (8 stops)
+  const g=ctx.createLinearGradient(0,SAND_Y-8,0,H);
+  g.addColorStop(0,'#ebe2d2');g.addColorStop(0.04,'#e6dbc9');
+  g.addColorStop(0.12,'#e0d4c0');g.addColorStop(0.25,'#d8ccb6');
+  g.addColorStop(0.45,'#d0c4ac');g.addColorStop(0.65,'#c8bca2');
+  g.addColorStop(0.85,'#c0b498');g.addColorStop(1,'#b8ac90');
   ctx.fillStyle=g;
   ctx.beginPath();ctx.moveTo(0,H);
   for(let x=0;x<=W;x++){
@@ -472,30 +504,53 @@ function drawSand(ctx,t){
   }
   ctx.lineTo(W,H);ctx.closePath();ctx.fill();
 
-  // Second sand layer
-  ctx.fillStyle='rgba(185,175,155,0.18)';
+  // Wet sand darkening at waterline
+  const wg=ctx.createLinearGradient(0,SAND_Y-5,0,SAND_Y+20);
+  wg.addColorStop(0,'rgba(100,85,60,0.22)');wg.addColorStop(0.3,'rgba(110,95,70,0.12)');
+  wg.addColorStop(1,'rgba(120,105,80,0)');
+  ctx.fillStyle=wg;
   ctx.beginPath();ctx.moveTo(0,H);
   for(let x=0;x<=W;x++){
-    ctx.lineTo(x,SAND_Y+14+Math.sin(x*0.02+2)*2.5+Math.sin(x*0.06)*1.2);
+    ctx.lineTo(x,SAND_Y+Math.sin(x*0.018+0.5)*4+Math.sin(x*0.05+1.2)*2+Math.sin(x*0.1)*0.8);
   }
   ctx.lineTo(W,H);ctx.closePath();ctx.fill();
 
+  // Second sand layer
+  ctx.fillStyle='rgba(175,165,145,0.14)';
+  ctx.beginPath();ctx.moveTo(0,H);
+  for(let x=0;x<=W;x++){
+    ctx.lineTo(x,SAND_Y+16+Math.sin(x*0.02+2)*2.5+Math.sin(x*0.06)*1.2);
+  }
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+
+  // Sand grain texture
   for(const g2 of sandGrains){ctx.fillStyle=g2.color;ctx.beginPath();ctx.arc(g2.x,g2.y,g2.r,0,Math.PI*2);ctx.fill();}
+
+  // Pebbles with 3D shading
   for(const p of pebbles){
     ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
-    ctx.fillStyle=p.color;ctx.beginPath();ctx.ellipse(0,0,p.rx,p.ry,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=`rgba(255,255,255,${p.hl})`;ctx.beginPath();ctx.ellipse(-p.rx*0.2,-p.ry*0.3,p.rx*0.45,p.ry*0.35,0,0,Math.PI*2);ctx.fill();
+    // Contact shadow
+    ctx.fillStyle='rgba(0,0,0,0.06)';ctx.beginPath();ctx.ellipse(1,1.5,p.rx+0.5,p.ry+0.3,0,0,Math.PI*2);ctx.fill();
+    // Body with radial gradient
+    const pg=ctx.createRadialGradient(-p.rx*0.2,-p.ry*0.25,0,0,0,Math.max(p.rx,p.ry));
+    pg.addColorStop(0,p.hl>0.08?'rgba(235,225,210,0.5)':'rgba(200,185,165,0.4)');
+    pg.addColorStop(1,p.color);
+    ctx.fillStyle=pg;ctx.beginPath();ctx.ellipse(0,0,p.rx,p.ry,0,0,Math.PI*2);ctx.fill();
+    // Specular
+    ctx.fillStyle=`rgba(255,250,240,${(p.hl*1.5).toFixed(3)})`;ctx.beginPath();ctx.ellipse(-p.rx*0.25,-p.ry*0.35,p.rx*0.35,p.ry*0.3,0.2,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
 
-  // Ripple lines on sand
-  ctx.strokeStyle='rgba(175,165,145,0.05)';ctx.lineWidth=0.8;
-  for(let i=0;i<6;i++){
-    const y=SAND_Y+8+i*6;
+  // Animated current ripple lines
+  ctx.save();
+  for(let i=0;i<8;i++){
+    const y=SAND_Y+6+i*5;
+    ctx.strokeStyle=`rgba(165,155,135,${(0.025+i*0.004).toFixed(3)})`;ctx.lineWidth=0.6;
     ctx.beginPath();
-    for(let x=0;x<=W;x+=2){ctx.lineTo(x,y+Math.sin(x*0.05+i*0.9)*1.2);}
+    for(let x=0;x<=W;x+=2){ctx.lineTo(x,y+Math.sin(x*0.04+i*0.8+t*0.05)*1.0+Math.sin(x*0.08+i*1.3)*0.4);}
     ctx.stroke();
   }
+  ctx.restore();
 }
 
 // ============================================================
@@ -606,7 +661,22 @@ function updateParts(dt){
   }
 }
 function drawParts(ctx){
-  for(const p of parts){const ds=lerp(1,0.4,p.depth);ctx.globalAlpha=p.alpha*lerp(1,0.35,p.depth);ctx.fillStyle='rgba(210,235,248,1)';ctx.beginPath();ctx.arc(p.x,p.y,p.r*ds,0,Math.PI*2);ctx.fill();}
+  for(const p of parts){
+    const ds=lerp(1,0.4,p.depth);
+    const r=p.r*ds;
+    const al=p.alpha*lerp(1,0.35,p.depth);
+    // Bokeh soft circle
+    ctx.save();
+    ctx.globalAlpha=al*0.4;
+    const bg=ctx.createRadialGradient(p.x,p.y,r*0.2,p.x,p.y,r*2.2);
+    bg.addColorStop(0,'rgba(220,248,255,0.3)');bg.addColorStop(0.6,'rgba(210,242,252,0.08)');
+    bg.addColorStop(1,'rgba(200,238,250,0)');
+    ctx.fillStyle=bg;ctx.beginPath();ctx.arc(p.x,p.y,r*2.2,0,Math.PI*2);ctx.fill();
+    // Core
+    ctx.globalAlpha=al;
+    ctx.fillStyle='rgba(230,248,255,1)';ctx.beginPath();ctx.arc(p.x,p.y,r*0.55,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
   ctx.globalAlpha=1;
 }
 
@@ -1013,6 +1083,36 @@ function drawGlass(ctx){
 }
 
 // ============================================================
+//  POST-PROCESSING (bloom, color grade, grain)
+// ============================================================
+const ppC=document.createElement('canvas');const ppX=ppC.getContext('2d');
+function drawPostProcess(ctx){
+  // Bloom: downscale → upsample with screen blend
+  const bw=Math.ceil(W/8),bh=Math.ceil(H/8);
+  ppC.width=bw;ppC.height=bh;
+  ppX.drawImage(C,0,0,bw,bh);
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.imageSmoothingEnabled=true;
+  ctx.globalAlpha=0.07;ctx.drawImage(ppC,0,0,W,H);
+  // Wider bloom pass
+  const bw2=Math.ceil(W/24),bh2=Math.ceil(H/24);
+  ppC.width=bw2;ppC.height=bh2;
+  ppX.drawImage(C,0,0,bw2,bh2);
+  ctx.globalAlpha=0.04;ctx.drawImage(ppC,0,0,W,H);
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+  // Color grading: warm highlights, cool shadows
+  ctx.save();ctx.globalCompositeOperation='overlay';ctx.globalAlpha=0.025;
+  const cg=ctx.createLinearGradient(0,0,0,H);
+  cg.addColorStop(0,'rgba(255,225,175,1)');cg.addColorStop(0.45,'rgba(210,220,240,1)');
+  cg.addColorStop(1,'rgba(90,130,175,1)');
+  ctx.fillStyle=cg;ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+  // Subtle film grain
+  ctx.save();ctx.globalAlpha=0.012;
+  for(let i=0;i<60;i++){ctx.fillStyle=Math.random()>0.5?'#fff':'#000';ctx.fillRect(Math.random()*W|0,Math.random()*H|0,1,1);}
+  ctx.globalAlpha=1;ctx.restore();
+}
+
+// ============================================================
 //  MAIN LOOP
 // ============================================================
 function render(now){
@@ -1046,6 +1146,7 @@ function render(now){
   drawHaze(X,time);
   drawBubs(X,time);
   drawGlass(X);
+  drawPostProcess(X);
 
   X.restore();
   requestAnimationFrame(render);
