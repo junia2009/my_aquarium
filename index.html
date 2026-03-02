@@ -612,9 +612,9 @@ class MoltedShell{
 // ============================================================
 //  SHRIMP BASE
 // ============================================================
-const ST={TSUMA:0,WALK:1,IDLE:2,SWIM:3,EAT:4,FOLLOW:5};
-const SNB=['ツマツマ中','歩き中','休憩中','スイム！','お食事中',''];
-const SNC=['ツマツマ中','歩き中','水草の影','スイム','お食事中','ついていく'];
+const ST={TSUMA:0,WALK:1,IDLE:2,SWIM:3,EAT:4,FOLLOW:5,FLOAT:6};
+const SNB=['ツマツマ中','歩き中','休憩中','スイム！','お食事中','','ふわふわ'];
+const SNC=['ツマツマ中','歩き中','水草の影','スイム','お食事中','ついていく','ふわふわ'];
 
 class Shrimp{
   constructor(x,y){
@@ -629,6 +629,14 @@ class Shrimp{
   pickWT(){
     this.tx=clamp(this.x+rand(-80,80),30,W-30);
     this.ty=clamp(rand(560,SAND_Y-5),550,SAND_Y);
+  }
+  pickSwimT(){
+    this.tx=clamp(this.x+rand(-150,150),35,W-35);
+    this.ty=rand(100,420);
+  }
+  pickFloatT(){
+    this.tx=clamp(this.x+rand(-60,60),35,W-35);
+    this.ty=clamp(this.y+rand(-50,50),80,400);
   }
   update(dt){
     this.st+=dt;
@@ -651,8 +659,17 @@ class Shrimp{
       case ST.SWIM:{
         this.jm=false;this.sb=1;
         const dx=this.tx-this.x,dy=this.ty-this.y,d=Math.sqrt(dx*dx+dy*dy);
-        if(d>5){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*3.5*dt;this.y+=(dy/d)*this.speed*2.5*dt;}
-        else this.st=this.sd;break;}
+        if(d>5){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*2.8*dt;this.y+=(dy/d)*this.speed*2.2*dt;}
+        else{this.pickSwimT();}
+        this.x+=Math.sin(time*0.7+this.bp)*0.3;this.y+=Math.cos(time*0.5+this.bp)*0.2;
+        break;}
+      case ST.FLOAT:{
+        this.jm=false;
+        const dx=this.tx-this.x,dy=this.ty-this.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d>8){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*0.6*dt;this.y+=(dy/d)*this.speed*0.5*dt;}
+        else{this.pickFloatT();}
+        this.x+=Math.sin(time*0.4+this.bp)*0.5;this.y+=Math.cos(time*0.3+this.bp+1)*0.4;
+        break;}
       case ST.EAT:{
         this.jm=true;let near=null,md=Infinity;
         for(const f of foods){if(f.eaten||!f.settled)continue;const fd=Math.abs(f.x-this.x)+Math.abs(f.y-this.y);if(fd<md){md=fd;near=f;}}
@@ -663,7 +680,8 @@ class Shrimp{
         break;}
       case ST.FOLLOW:this.jm=false;break;
     }
-    this.x=clamp(this.x,20,W-20);this.y=clamp(this.y,480,SAND_Y+2);
+    const minY=(this.state===ST.SWIM||this.state===ST.FLOAT)?60:480;
+    this.x=clamp(this.x,20,W-20);this.y=clamp(this.y,minY,SAND_Y+2);
   }
   molt(){
     shells.push(new MoltedShell(this.x,this.y-3,this instanceof BeeShrimp));
@@ -705,10 +723,11 @@ class BeeShrimp extends Shrimp{
   pickNewState(){
     const r=Math.random();
     if(foods.some(f=>!f.eaten&&f.settled)){this.state=ST.EAT;this.sd=rand(5,10);}
-    else if(r<0.70){this.state=ST.TSUMA;this.sd=rand(5,12);}
-    else if(r<0.90){this.state=ST.WALK;this.pickWT();this.sd=rand(3,8);}
-    else if(r<0.98){this.state=ST.IDLE;this.sd=rand(2,6);}
-    else{this.state=ST.SWIM;this.tx=clamp(this.x+rand(-120,120),40,W-40);this.ty=rand(500,560);this.sd=rand(1,2);}
+    else if(r<0.35){this.state=ST.TSUMA;this.sd=rand(4,9);}
+    else if(r<0.50){this.state=ST.WALK;this.pickWT();this.sd=rand(3,7);}
+    else if(r<0.56){this.state=ST.IDLE;this.sd=rand(2,5);}
+    else if(r<0.78){this.state=ST.SWIM;this.pickSwimT();this.sd=rand(5,12);}
+    else{this.state=ST.FLOAT;this.pickFloatT();this.sd=rand(6,15);}
     this.st=0;document.getElementById('beeS').textContent=SNB[this.state];
   }
   draw(ctx){
@@ -794,11 +813,12 @@ class ClearShrimp extends Shrimp{
   pickNewState(){
     const r=Math.random();
     if(foods.some(f=>!f.eaten&&f.settled)){if(Math.random()<.55){this.state=ST.EAT;this.sd=rand(5,10);}else{this.state=ST.TSUMA;this.sd=rand(3,6);}}
-    else if(r<.55){this.state=ST.TSUMA;this.sd=rand(5,14);}
-    else if(r<.75){this.state=ST.WALK;const p=plants[randI(0,plants.length-1)];this.tx=p.x+rand(-20,20);this.ty=clamp(p.y-rand(3,15),565,SAND_Y);this.sd=rand(3,7);}
-    else if(r<.88){this.state=ST.IDLE;this.sd=rand(3,9);}
-    else if(r<.95){this.state=ST.FOLLOW;this.sd=rand(4,8);}
-    else{this.state=ST.SWIM;this.tx=clamp(this.x+rand(-90,90),40,W-40);this.ty=rand(510,570);this.sd=rand(1,2);}
+    else if(r<.30){this.state=ST.TSUMA;this.sd=rand(4,10);}
+    else if(r<.45){this.state=ST.WALK;const p=plants[randI(0,plants.length-1)];this.tx=p.x+rand(-20,20);this.ty=clamp(p.y-rand(3,15),565,SAND_Y);this.sd=rand(3,7);}
+    else if(r<.52){this.state=ST.IDLE;this.sd=rand(3,8);}
+    else if(r<.60){this.state=ST.FOLLOW;this.sd=rand(4,8);}
+    else if(r<.82){this.state=ST.SWIM;this.pickSwimT();this.sd=rand(5,12);}
+    else{this.state=ST.FLOAT;this.pickFloatT();this.sd=rand(6,15);}
     this.st=0;document.getElementById('clrS').textContent=SNC[this.state];
   }
   update(dt){super.update(dt);
