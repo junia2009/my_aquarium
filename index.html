@@ -637,12 +637,12 @@ class Shrimp{
     this.ty=clamp(rand(560,SAND_Y-5),550,SAND_Y);
   }
   pickSwimT(){
-    this.tx=clamp(this.x+rand(-150,150),35,W-35);
-    this.ty=rand(100,420);
+    this.tx=clamp(this.x+rand(-100,100),35,W-35);
+    this.ty=clamp(this.y+rand(-120,-30),80,380);
   }
   pickFloatT(){
-    this.tx=clamp(this.x+rand(-60,60),35,W-35);
-    this.ty=clamp(this.y+rand(-50,50),80,400);
+    this.tx=clamp(this.x+rand(-50,50),35,W-35);
+    this.ty=clamp(this.y+rand(-40,40),80,400);
   }
   update(dt){
     this.st+=dt;
@@ -655,13 +655,20 @@ class Shrimp{
     if(this.st>=this.sd)this.pickNewState();
 
     switch(this.state){
-      case ST.TSUMA:this.jm=true;this.y+=Math.sin(time*1.8+this.bp)*0.06;break;
+      case ST.TSUMA:this.jm=true;
+        if(this.y<470){this.y+=this.speed*0.8*dt;this.x+=Math.sin(time*0.3+this.bp)*0.3;}
+        else{this.y+=Math.sin(time*1.8+this.bp)*0.06;}
+        break;
       case ST.WALK:{
         this.jm=false;
+        if(this.y<470){this.ty=clamp(rand(560,SAND_Y-5),550,SAND_Y);}
         const dx=this.tx-this.x,dy=this.ty-this.y,d=Math.sqrt(dx*dx+dy*dy);
-        if(d>3){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*0.4*dt;}
+        if(d>3){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*dt;}
         else this.st=this.sd;break;}
-      case ST.IDLE:this.jm=false;this.y+=Math.sin(time*1.2+this.bp)*0.04;break;
+      case ST.IDLE:this.jm=false;
+        if(this.y<470){this.y+=this.speed*0.6*dt;this.x+=Math.sin(time*0.3+this.bp)*0.2;}
+        else{this.y+=Math.sin(time*1.2+this.bp)*0.04;}
+        break;
       case ST.SWIM:{
         this.jm=false;this.sb=1;
         const dx=this.tx-this.x,dy=this.ty-this.y,d=Math.sqrt(dx*dx+dy*dy);
@@ -680,14 +687,13 @@ class Shrimp{
         this.jm=true;let near=null,md=Infinity;
         for(const f of foods){if(f.eaten||!f.settled)continue;const fd=Math.abs(f.x-this.x)+Math.abs(f.y-this.y);if(fd<md){md=fd;near=f;}}
         if(near){const dx=near.x-this.x,dy=near.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
-          if(d>7){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*0.4*dt;}
+          if(d>7){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*dt;}
           else near.eaten=true;
         }else{this.state=ST.TSUMA;this.st=0;this.sd=rand(3,6);}
         break;}
       case ST.FOLLOW:this.jm=false;break;
     }
-    const minY=(this.state===ST.SWIM||this.state===ST.FLOAT)?60:480;
-    this.x=clamp(this.x,20,W-20);this.y=clamp(this.y,minY,SAND_Y+2);
+    this.x=clamp(this.x,20,W-20);this.y=clamp(this.y,60,SAND_Y+2);
   }
   molt(){
     shells.push(new MoltedShell(this.x,this.y-3,this instanceof BeeShrimp));
