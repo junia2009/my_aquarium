@@ -677,38 +677,44 @@ class Shrimp{
     this.transparency=Math.min(this.transparency+0.06,0.25);
     notify('🦐 脱皮しました！ 殻がふわりと浮いていきます…');
   }
-  drawShadow(ctx,w,h){
-    ctx.save();ctx.globalAlpha=0.10;
-    const sw=Math.sin(time*0.4)*0.03;
-    ctx.fillStyle='rgba(0,20,40,1)';
-    ctx.beginPath();ctx.ellipse(0,h+2,w*1.1,h*0.35,sw,0,Math.PI*2);ctx.fill();
+
+  // ── Realistic shadow ──
+  drawShadow(ctx,bodyW){
+    ctx.save();ctx.globalAlpha=0.08;
+    ctx.fillStyle='rgba(0,15,30,1)';
+    ctx.beginPath();ctx.ellipse(-2,16,bodyW*0.55,3,Math.sin(time*0.4)*0.02,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
-  drawAntennae(ctx,hx,hy,s){
-    const sw1=Math.sin(this.antPhase)*0.12;
-    const sw2=Math.sin(this.antPhase+1.5)*0.10;
-    ctx.lineWidth=0.7;
-    ctx.strokeStyle='rgba(180,160,140,0.4)';
-    ctx.beginPath();ctx.moveTo(hx+2,hy-1);
-    const a1x=hx+this.facing*30*s+Math.sin(this.antPhase*0.7)*4;
-    const a1y=hy-18*s+sw1*12;
-    ctx.bezierCurveTo(hx+this.facing*10*s,hy-12*s,hx+this.facing*20*s,hy-16*s+sw1*6,a1x,a1y);
+
+  // ── Realistic antennae: 2 long + 2 short antennules ──
+  drawAntennae(ctx,bx,by,sc,am){
+    const a=am||1;
+    const s1=Math.sin(this.antPhase*0.6),s2=Math.sin(this.antPhase*0.5+1.2),s3=Math.sin(this.antPhase*0.7+0.5);
+    // Long antenna 1 (upper, sweeps far forward and up)
+    ctx.lineWidth=0.4;ctx.strokeStyle='rgba(150,130,110,'+(0.28*a).toFixed(2)+')';
+    ctx.beginPath();ctx.moveTo(bx,by);
+    ctx.bezierCurveTo(bx+14*sc,by-10*sc+s1*3,bx+28*sc,by-18*sc+s1*6,bx+40*sc+s1*4,by-22*sc+s1*8);
     ctx.stroke();
-    ctx.strokeStyle='rgba(180,160,140,0.35)';
-    ctx.beginPath();ctx.moveTo(hx+1,hy+1);
-    const a2x=hx+this.facing*22*s+Math.sin(this.antPhase*0.9+0.5)*3;
-    const a2y=hy-8*s+sw2*10;
-    ctx.bezierCurveTo(hx+this.facing*8*s,hy-6*s,hx+this.facing*15*s,hy-8*s+sw2*4,a2x,a2y);
+    // Long antenna 2 (lower)
+    ctx.strokeStyle='rgba(150,130,110,'+(0.22*a).toFixed(2)+')';
+    ctx.beginPath();ctx.moveTo(bx,by+1);
+    ctx.bezierCurveTo(bx+12*sc,by-4*sc+s2*3,bx+24*sc,by-6*sc+s2*5,bx+36*sc+s2*3,by-12*sc+s2*7);
     ctx.stroke();
-    ctx.strokeStyle='rgba(180,160,140,0.2)';
-    ctx.beginPath();ctx.moveTo(hx,hy+2);
-    ctx.quadraticCurveTo(hx+this.facing*8*s,hy+5*s,hx+this.facing*14*s,hy-2*s+sw2*5);
+    // Antennule 1 (shorter, slightly thicker)
+    ctx.lineWidth=0.6;ctx.strokeStyle='rgba(150,130,110,'+(0.30*a).toFixed(2)+')';
+    ctx.beginPath();ctx.moveTo(bx-1,by+2);
+    ctx.bezierCurveTo(bx+5*sc,by+3*sc+s3*2,bx+9*sc,by+1*sc+s3*3,bx+14*sc+s3*2,by+4*sc+s3*4);
+    ctx.stroke();
+    // Antennule 2
+    ctx.lineWidth=0.5;ctx.strokeStyle='rgba(150,130,110,'+(0.22*a).toFixed(2)+')';
+    ctx.beginPath();ctx.moveTo(bx-1,by+3);
+    ctx.bezierCurveTo(bx+4*sc,by+5*sc+s3*2,bx+7*sc,by+4*sc+s3*2,bx+12*sc+s3*1.5,by+7*sc+s3*3);
     ctx.stroke();
   }
 }
 
 // ============================================================
-//  BEE SHRIMP — detailed realistic
+//  BEE SHRIMP — anatomically realistic side-view
 // ============================================================
 class BeeShrimp extends Shrimp{
   constructor(){super(rand(300,550),rand(495,530));this.speed=17;}
@@ -722,139 +728,216 @@ class BeeShrimp extends Shrimp{
     this.stateTimer=0;
     document.getElementById('beeStatus').textContent=SN_BEE[this.state];
   }
+
   draw(ctx){
-    const s=1.0;const bodyLen=34*s;const headR=9*s;
-    const segCount=7;const segLen=bodyLen/segCount;
-    const wave=Math.sin(this.bodyWave)*1.2;
-    const breath=Math.sin(this.breathPhase)*0.5;
-    const tOff=this.jawMoving?Math.sin(this.tsumaPhase)*1.8:0;
+    ctx.save();
+    ctx.translate(this.x,this.y);
+    ctx.scale(this.facing,1);
+    if(this.transparency>0) ctx.globalAlpha=1-this.transparency*0.3;
 
-    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing,1);
-    if(this.transparency>0)ctx.globalAlpha=1-this.transparency*0.3;
+    const w=this.bodyWave;
+    const br=Math.sin(this.breathPhase)*0.3;
+    const tOff=this.jawMoving?Math.sin(this.tsumaPhase)*0.6:0;
 
-    this.drawShadow(ctx,24,8);
+    // Animated vertical offsets for natural body undulation
+    const ay=(t)=>Math.sin(w+t*2.5)*0.5*(1-t)+br*t;
+    const a0=ay(0),a1=ay(0.12),a2=ay(0.25),a3=ay(0.38),a4=ay(0.50),a5=ay(0.62),a6=ay(0.75),a7=ay(0.88),a8=ay(1.0);
 
-    // TAIL FAN
-    const tailX=-bodyLen+1,tailY=wave*0.8;
-    for(let i=-1;i<=1;i++){
-      ctx.fillStyle=i===0?'rgba(200,50,40,0.7)':'rgba(200,50,40,0.5)';
+    // ── Helper: trace anatomical body outline using bezier curves ──
+    // Dorsal contour arches up (carapace dome), ventral is flatter
+    // Body length ~48px, height ~16px at widest (carapace)
+    const bodyPath=()=>{
       ctx.beginPath();
-      ctx.ellipse(tailX-5+i*2,tailY+i*1.5,7+Math.abs(i),3-Math.abs(i)*0.5,
-        -0.15+i*0.25+(this.swimBurst>0?Math.sin(time*20)*0.3*i:0),0,Math.PI*2);
-      ctx.fill();
-    }
-    ctx.strokeStyle='rgba(255,200,180,0.2)';ctx.lineWidth=0.5;
-    ctx.beginPath();ctx.ellipse(tailX-5,tailY,7,3,-0.15,0,Math.PI*2);ctx.stroke();
+      // Start at tail base (dorsal side)
+      ctx.moveTo(-22,2+a0);
+      // === DORSAL CONTOUR (tail → head, curving upward) ===
+      // Abdomen: 6 segments gradually rising
+      ctx.bezierCurveTo(-20,0.5+a0,-18,-1+a1,-16,-2.5+a1);
+      ctx.bezierCurveTo(-14,-3.8+a2,-12,-5+a2,-10,-5.8+a3);
+      ctx.bezierCurveTo(-8,-6.5+a3,-5,-7.2+a3,-2,-7.8+a4);
+      ctx.bezierCurveTo(0,-8.2+a4,2,-8.5+a5,4,-8.8+a5);
+      // Carapace: smooth dome (highest point of body)
+      ctx.bezierCurveTo(6,-9.2+a5,9,-9.5+a6,12,-9.2+a6);
+      ctx.bezierCurveTo(14,-8.8+a7,16,-7.8+a7,18,-6+a7);
+      // Head: tapers forward
+      ctx.bezierCurveTo(19,-5+a8,20,-4+a8,21,-3+a8);
+      // Head front edge
+      ctx.lineTo(21,2+a8);
+      // === VENTRAL CONTOUR (head → tail, flatter) ===
+      ctx.bezierCurveTo(20,3.5+a8,18,5+a7,16,5.5+a7);
+      ctx.bezierCurveTo(14,6+a7,12,6.5+a6,9,7+a6);
+      ctx.bezierCurveTo(6,7+a5,3,7+a5,0,6.5+a4);
+      ctx.bezierCurveTo(-3,6+a4,-6,5.5+a3,-9,5+a3);
+      ctx.bezierCurveTo(-12,4.5+a2,-15,4+a2,-18,3.5+a1);
+      ctx.bezierCurveTo(-20,3.2+a1,-21,3+a0,-22,3+a0);
+      ctx.closePath();
+    };
 
-    // BODY SEGMENTS
-    for(let i=segCount-1;i>=0;i--){
-      const t0=i/segCount;
-      const sx=-bodyLen+i*segLen+segLen/2;
-      const sy=Math.sin(this.bodyWave+i*0.35)*1.2+breath;
-      const thickness=lerp(5.5,9.5,1-Math.pow(Math.abs(t0-0.35)*1.8,1.5))*s;
-      const sw=segLen*1.05;
-      const isRed=i%2===0;
-      const baseColor=isRed?[195,45,40]:[240,232,218];
-      ctx.fillStyle=`rgb(${baseColor[0]},${baseColor[1]},${baseColor[2]})`;
-      ctx.beginPath();ctx.ellipse(sx,sy,sw/2,thickness,0,0,Math.PI*2);ctx.fill();
+    // ── Shadow ──
+    this.drawShadow(ctx,48);
 
-      const hlGrad=ctx.createLinearGradient(sx,sy-thickness,sx,sy+thickness);
-      if(isRed){
-        hlGrad.addColorStop(0,'rgba(255,140,120,0.35)');hlGrad.addColorStop(0.4,'rgba(255,100,80,0.1)');
-        hlGrad.addColorStop(0.7,'rgba(150,20,15,0.15)');hlGrad.addColorStop(1,'rgba(120,15,10,0.25)');
-      }else{
-        hlGrad.addColorStop(0,'rgba(255,255,255,0.5)');hlGrad.addColorStop(0.3,'rgba(255,255,250,0.2)');
-        hlGrad.addColorStop(0.7,'rgba(230,220,200,0.1)');hlGrad.addColorStop(1,'rgba(200,190,170,0.2)');
-      }
-      ctx.fillStyle=hlGrad;ctx.beginPath();ctx.ellipse(sx,sy,sw/2,thickness,0,0,Math.PI*2);ctx.fill();
-
-      if(i<segCount-1){
-        ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=0.5;
-        const edgeX=-bodyLen+i*segLen;
-        ctx.beginPath();ctx.moveTo(edgeX,sy-thickness*0.7);ctx.lineTo(edgeX,sy+thickness*0.7);ctx.stroke();
-      }
-    }
-
-    // PLEOPODS
-    ctx.strokeStyle='rgba(200,140,120,0.3)';ctx.lineWidth=0.6;
+    // ── TAIL FAN (telson + 2 pairs of uropods) ──
+    const tBx=-22,tBy=2.5+a0;
+    const flick=this.swimBurst>0?Math.sin(time*18)*3:0;
+    // Upper uropod
+    ctx.fillStyle='rgba(190,55,45,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(tBx,tBy-1);
+    ctx.quadraticCurveTo(tBx-7,tBy-5+flick*0.3,tBx-13,tBy-3+flick*0.5);
+    ctx.quadraticCurveTo(tBx-8,tBy-0.5,tBx,tBy);
+    ctx.fill();
+    // Telson (central paddle)
+    ctx.fillStyle='rgba(195,60,50,0.65)';
+    ctx.beginPath();
+    ctx.moveTo(tBx,tBy-0.5);
+    ctx.quadraticCurveTo(tBx-9,tBy,tBx-14,tBy+0.5);
+    ctx.quadraticCurveTo(tBx-9,tBy+1.5,tBx,tBy+1);
+    ctx.fill();
+    // Lower uropod
+    ctx.fillStyle='rgba(190,55,45,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(tBx,tBy+0.5);
+    ctx.quadraticCurveTo(tBx-7,tBy+5-flick*0.3,tBx-12,tBy+5-flick*0.5);
+    ctx.quadraticCurveTo(tBx-7,tBy+3,tBx,tBy+1.5);
+    ctx.fill();
+    // Tail fan setae (fine hairs at edge)
+    ctx.strokeStyle='rgba(200,180,160,0.1)';ctx.lineWidth=0.3;
     for(let i=0;i<5;i++){
-      const lx=-bodyLen+8+i*5;
-      const ly=Math.sin(this.bodyWave+i*0.35)*1.2+breath+4;
-      const swing=Math.sin(this.legPhase+i*1.0)*3;
-      ctx.beginPath();ctx.moveTo(lx,ly);ctx.quadraticCurveTo(lx+swing*0.5,ly+4,lx+swing,ly+7);ctx.stroke();
-      ctx.strokeStyle='rgba(200,150,130,0.15)';
-      ctx.beginPath();ctx.moveTo(lx+swing,ly+7);ctx.lineTo(lx+swing+1,ly+8.5);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(lx+swing,ly+7);ctx.lineTo(lx+swing-1,ly+8.5);ctx.stroke();
-      ctx.strokeStyle='rgba(200,140,120,0.3)';
+      const ang=-0.6+i*0.3;
+      ctx.beginPath();
+      ctx.moveTo(tBx-11+Math.abs(i-2),tBy+Math.sin(ang)*3);
+      ctx.lineTo(tBx-15+Math.abs(i-2)*0.5,tBy+Math.sin(ang)*5.5);
+      ctx.stroke();
     }
 
-    // WALKING LEGS
-    ctx.strokeStyle='rgba(200,160,140,0.5)';ctx.lineWidth=0.8;
-    for(let i=0;i<4;i++){
-      const lx=-4+i*4;const ly=breath+5;
-      const swing=Math.sin(this.legPhase*1.2+i*1.4)*2.5;
-      const knee=ly+5;
-      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+swing*0.4,knee);ctx.lineTo(lx+swing,knee+4);ctx.stroke();
+    // ── BODY: base red fill ──
+    bodyPath();
+    ctx.fillStyle='#c43333';
+    ctx.fill();
+
+    // ── WHITE BANDS (clipped to body shape) ──
+    ctx.save();
+    bodyPath();
+    ctx.clip();
+    // Crystal Red Bee pattern: alternating red/white bands
+    const bands=[[-23,-16],[-9,-3],[3,9],[17,22]];
+    for(const[x1,x2]of bands){
+      ctx.fillStyle='#ede5d8';
+      ctx.fillRect(x1,-14,x2-x1,28);
+    }
+    // Dorsal highlight (3D shading over entire body)
+    const hlG=ctx.createLinearGradient(0,-10,0,8);
+    hlG.addColorStop(0,'rgba(255,230,220,0.25)');
+    hlG.addColorStop(0.35,'rgba(255,200,180,0.08)');
+    hlG.addColorStop(0.7,'rgba(0,0,0,0)');
+    hlG.addColorStop(1,'rgba(0,0,0,0.1)');
+    ctx.fillStyle=hlG;
+    ctx.fillRect(-24,-14,50,28);
+    ctx.restore();
+
+    // ── Subtle body outline ──
+    bodyPath();
+    ctx.strokeStyle='rgba(140,30,25,0.12)';
+    ctx.lineWidth=0.6;
+    ctx.stroke();
+
+    // ── ABDOMEN SEGMENT LINES ──
+    ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=0.5;
+    const segXs=[-18,-14,-10,-6,-2,2];
+    for(const sx of segXs){
+      const t=(sx+22)/44;
+      const aOff=ay(t);
+      const topY=lerp(0,-8.5,Math.min(t*1.3,1))+aOff;
+      const botY=lerp(3.5,7,Math.min(t*1.1,1))+aOff;
+      ctx.beginPath();ctx.moveTo(sx,topY);ctx.lineTo(sx+0.3,botY);ctx.stroke();
+    }
+    // Carapace-abdomen division (more prominent)
+    ctx.strokeStyle='rgba(0,0,0,0.09)';ctx.lineWidth=0.6;
+    ctx.beginPath();ctx.moveTo(5,-8.8+a5);ctx.lineTo(5.3,7+a5);ctx.stroke();
+
+    // ── PLEOPODS (5 pairs of swimming legs under abdomen) ──
+    ctx.lineWidth=0.5;
+    for(let i=0;i<5;i++){
+      const lx=-16+i*4.5;
+      const t=(lx+22)/44;
+      const aOff=ay(t);
+      const baseY=lerp(3.5,6.5,Math.min(t*1.1,1))+aOff;
+      const swing=Math.sin(this.legPhase+i*1.1)*2;
+      ctx.strokeStyle='rgba(200,120,100,0.25)';
+      ctx.beginPath();ctx.moveTo(lx,baseY);
+      ctx.quadraticCurveTo(lx+swing*0.5,baseY+3,lx+swing,baseY+5.5);
+      ctx.stroke();
+      // Feathery setae at tip
+      ctx.strokeStyle='rgba(200,140,120,0.12)';
+      ctx.beginPath();ctx.moveTo(lx+swing,baseY+5.5);ctx.lineTo(lx+swing+0.8,baseY+6.5);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(lx+swing,baseY+5.5);ctx.lineTo(lx+swing-0.8,baseY+6.5);ctx.stroke();
     }
 
-    // HEAD
-    const hx=5,hy=wave*0.4+breath;
-    const carapaceGrad=ctx.createRadialGradient(hx-2,hy-3,0,hx,hy,headR+3);
-    carapaceGrad.addColorStop(0,'#d84040');carapaceGrad.addColorStop(0.5,'#c53535');carapaceGrad.addColorStop(1,'#a82828');
-    ctx.fillStyle=carapaceGrad;
-    ctx.beginPath();ctx.ellipse(hx,hy,headR+2,headR+0.5,0.05,0,Math.PI*2);ctx.fill();
+    // ── PEREIOPODS (5 pairs of walking legs under carapace) ──
+    ctx.strokeStyle='rgba(200,140,120,0.4)';ctx.lineWidth=0.6;
+    for(let i=0;i<5;i++){
+      const lx=7+i*2.8;
+      const aOff=ay(0.65+i*0.05);
+      const baseY=6+aOff;
+      const swing=Math.sin(this.legPhase*1.2+i*1.3)*2;
+      ctx.beginPath();ctx.moveTo(lx,baseY);
+      const kneeY=baseY+4;
+      ctx.lineTo(lx+swing*0.3,kneeY);
+      ctx.lineTo(lx+swing,kneeY+3.5);
+      ctx.stroke();
+    }
 
-    ctx.fillStyle='#f0e8da';
-    ctx.beginPath();ctx.ellipse(hx+4,hy-0.5,headR*0.55,headR*0.45,0.08,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.2)';
-    ctx.beginPath();ctx.ellipse(hx+3,hy-2,headR*0.3,headR*0.2,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,180,160,0.2)';
-    ctx.beginPath();ctx.ellipse(hx-1,hy-headR*0.55,headR*0.7,headR*0.3,0.1,0,Math.PI*2);ctx.fill();
-
-    // EYE
-    const eyeX=hx+7,eyeY=hy-3.5,eyeR=3.3*s;
-    ctx.fillStyle='rgba(180,70,60,0.6)';
-    ctx.beginPath();ctx.ellipse(eyeX-1.5,eyeY+1,2,1.5,0.3,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(eyeX,eyeY,eyeR,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(60,40,30,0.5)';ctx.lineWidth=0.8;ctx.beginPath();ctx.arc(eyeX,eyeY,eyeR,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.85)';ctx.beginPath();ctx.arc(eyeX+1,eyeY-1.2,eyeR*0.35,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(200,230,255,0.4)';ctx.beginPath();ctx.arc(eyeX-0.8,eyeY+1,eyeR*0.2,0,Math.PI*2);ctx.fill();
-
-    // ROSTRUM
-    ctx.fillStyle='#b83030';
-    ctx.beginPath();ctx.moveTo(hx+headR+1,hy-2);
-    ctx.quadraticCurveTo(hx+headR+7+tOff,hy-4,hx+headR+10+tOff,hy-3);
-    ctx.quadraticCurveTo(hx+headR+7+tOff,hy,hx+headR+1,hy+1);
+    // ── ROSTRUM (sharp forward projection) ──
+    ctx.fillStyle='#c43333';
+    ctx.beginPath();
+    ctx.moveTo(21,-3.5+a8);
+    ctx.lineTo(26+tOff,-5+a8);
+    ctx.lineTo(21,-2+a8);
     ctx.closePath();ctx.fill();
-    ctx.strokeStyle='rgba(180,40,30,0.3)';ctx.lineWidth=0.4;ctx.stroke();
 
-    // ANTENNAE
-    this.drawAntennae(ctx,hx+headR+1,hy-3,s);
+    // ── EYE (small, proportional — on short stalk) ──
+    const eyeX=19.5,eyeY=-4.5+a8;
+    // Eyestalk
+    ctx.fillStyle='rgba(160,60,50,0.4)';
+    ctx.beginPath();ctx.ellipse(eyeX,eyeY+1.2,1.2,1.8,0.15,0,Math.PI*2);ctx.fill();
+    // Eye globe (small, realistic)
+    ctx.fillStyle='#1a1a1a';
+    ctx.beginPath();ctx.arc(eyeX+0.3,eyeY,1.5,0,Math.PI*2);ctx.fill();
+    // Tiny specular highlight
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.beginPath();ctx.arc(eyeX+0.8,eyeY-0.5,0.45,0,Math.PI*2);ctx.fill();
 
-    // TSUMATUMA CLAWS
+    // ── ANTENNAE ──
+    this.drawAntennae(ctx,22,-3+a8,1);
+
+    // ── MAXILLIPEDS / TSUMATUMA CLAWS ──
     if(this.jawMoving){
-      const co=Math.sin(this.tsumaPhase)*2.5;
-      ctx.strokeStyle='rgba(200,130,110,0.6)';ctx.lineWidth=1.2;
-      ctx.beginPath();ctx.moveTo(hx+headR+3,hy-2);ctx.lineTo(hx+headR+10+tOff,hy-4-co);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(hx+headR+3,hy+1);ctx.lineTo(hx+headR+10+tOff,hy+3+co);ctx.stroke();
-      ctx.fillStyle='rgba(200,130,110,0.5)';
-      ctx.beginPath();ctx.arc(hx+headR+10+tOff,hy-4-co,1,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(hx+headR+10+tOff,hy+3+co,1,0,Math.PI*2);ctx.fill();
+      const co=Math.sin(this.tsumaPhase)*1.8;
+      ctx.strokeStyle='rgba(200,130,110,0.5)';ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.moveTo(20,0.5+a8);ctx.lineTo(23+tOff,-1-co+a8);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(20,1.5+a8);ctx.lineTo(23+tOff,3+co+a8);ctx.stroke();
+      ctx.fillStyle='rgba(200,130,110,0.4)';
+      ctx.beginPath();ctx.arc(23+tOff,-1-co+a8,0.7,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(23+tOff,3+co+a8,0.7,0,Math.PI*2);ctx.fill();
     }
 
-    // LIGHT REFLECTION
+    // ── ENVIRONMENT LIGHT REFLECTION ──
     ctx.globalCompositeOperation='screen';
-    ctx.globalAlpha=0.06+Math.sin(time*0.5)*0.02;
-    const envGrad=ctx.createLinearGradient(-bodyLen,0,10,0);
-    envGrad.addColorStop(0,'rgba(150,220,255,0)');envGrad.addColorStop(0.5,'rgba(150,220,255,1)');envGrad.addColorStop(1,'rgba(150,220,255,0)');
-    ctx.fillStyle=envGrad;ctx.fillRect(-bodyLen-10,-12,bodyLen+25,6);
+    ctx.globalAlpha=0.04+Math.sin(time*0.5)*0.015;
+    const envG=ctx.createLinearGradient(-24,0,22,0);
+    envG.addColorStop(0,'rgba(150,220,255,0)');
+    envG.addColorStop(0.4,'rgba(150,220,255,1)');
+    envG.addColorStop(0.7,'rgba(150,220,255,0.5)');
+    envG.addColorStop(1,'rgba(150,220,255,0)');
+    ctx.fillStyle=envG;
+    ctx.fillRect(-24,-11,48,5);
     ctx.globalCompositeOperation='source-over';
     ctx.globalAlpha=1;ctx.restore();
   }
 }
 
 // ============================================================
-//  CLEAR SHRIMP — realistic transparent
+//  CLEAR SHRIMP — anatomically realistic transparent
 // ============================================================
 class ClearShrimp extends Shrimp{
   constructor(){super(rand(600,800),rand(505,540));this.speed=14;this.baseAlpha=0.42;}
@@ -883,96 +966,165 @@ class ClearShrimp extends Shrimp{
       if(d>25){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*0.7*dt;this.y+=(dy/d)*this.speed*0.25*dt;}
     }
   }
+
   draw(ctx){
-    const s=0.82;const bodyLen=28*s;const headR=6*s;
-    const segCount=6;const segLen=bodyLen/segCount;
-    const wave=Math.sin(this.bodyWave)*0.8;
-    const breath=Math.sin(this.breathPhase)*0.3;
+    const sc=0.82;
+    ctx.save();
+    ctx.translate(this.x,this.y);
+    ctx.scale(this.facing*sc,sc);
     const alpha=this.baseAlpha-this.transparency*0.15;
-
-    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing,1);
-    ctx.globalAlpha=alpha;
-    this.drawShadow(ctx,16,5);
     ctx.globalAlpha=alpha;
 
-    // Tail
-    const tx=-bodyLen+1,ty=wave*0.6;
-    ctx.fillStyle='rgba(180,210,195,0.4)';
-    ctx.beginPath();ctx.ellipse(tx-4,ty,5.5,2.5,-0.12,0,Math.PI*2);ctx.fill();
+    const w=this.bodyWave;
+    const br=Math.sin(this.breathPhase)*0.3;
+    const tOff=this.jawMoving?Math.sin(this.tsumaPhase)*0.5:0;
+    const ay=(t)=>Math.sin(w+t*2.5)*0.4*(1-t)+br*t;
+    const a0=ay(0),a1=ay(0.12),a2=ay(0.25),a3=ay(0.38),a4=ay(0.50),a5=ay(0.62),a6=ay(0.75),a7=ay(0.88),a8=ay(1.0);
 
-    // Body
-    for(let i=segCount-1;i>=0;i--){
-      const t0=i/segCount;
-      const sx=-bodyLen+i*segLen+segLen/2;
-      const sy=Math.sin(this.bodyWave+i*0.35)*0.8+breath;
-      const th=lerp(4,6.5,1-Math.pow(Math.abs(t0-0.35)*1.8,1.5))*s;
-      const sw=segLen*1.05;
+    // ── Body path (same anatomical shape as bee shrimp) ──
+    const bodyPath=()=>{
+      ctx.beginPath();
+      ctx.moveTo(-22,2+a0);
+      ctx.bezierCurveTo(-20,0.5+a0,-18,-1+a1,-16,-2.5+a1);
+      ctx.bezierCurveTo(-14,-3.8+a2,-12,-5+a2,-10,-5.8+a3);
+      ctx.bezierCurveTo(-8,-6.5+a3,-5,-7.2+a3,-2,-7.8+a4);
+      ctx.bezierCurveTo(0,-8.2+a4,2,-8.5+a5,4,-8.8+a5);
+      ctx.bezierCurveTo(6,-9.2+a5,9,-9.5+a6,12,-9.2+a6);
+      ctx.bezierCurveTo(14,-8.8+a7,16,-7.8+a7,18,-6+a7);
+      ctx.bezierCurveTo(19,-5+a8,20,-4+a8,21,-3+a8);
+      ctx.lineTo(21,2+a8);
+      ctx.bezierCurveTo(20,3.5+a8,18,5+a7,16,5.5+a7);
+      ctx.bezierCurveTo(14,6+a7,12,6.5+a6,9,7+a6);
+      ctx.bezierCurveTo(6,7+a5,3,7+a5,0,6.5+a4);
+      ctx.bezierCurveTo(-3,6+a4,-6,5.5+a3,-9,5+a3);
+      ctx.bezierCurveTo(-12,4.5+a2,-15,4+a2,-18,3.5+a1);
+      ctx.bezierCurveTo(-20,3.2+a1,-21,3+a0,-22,3+a0);
+      ctx.closePath();
+    };
 
-      const bodyGrad=ctx.createRadialGradient(sx,sy-th*0.2,0,sx,sy,th*1.2);
-      bodyGrad.addColorStop(0,`rgba(210,230,220,${0.35+i*0.02})`);
-      bodyGrad.addColorStop(0.6,`rgba(195,220,210,${0.25+i*0.02})`);
-      bodyGrad.addColorStop(1,`rgba(180,210,200,${0.15})`);
-      ctx.fillStyle=bodyGrad;ctx.beginPath();ctx.ellipse(sx,sy,sw/2,th,0,0,Math.PI*2);ctx.fill();
+    // ── Shadow ──
+    this.drawShadow(ctx,44);
+    ctx.globalAlpha=alpha;
 
-      if(i>=2&&i<=4){
-        ctx.fillStyle=`rgba(215,175,110,${0.12+Math.sin(time*0.8+i)*0.03})`;
-        ctx.beginPath();ctx.ellipse(sx,sy+1,sw*0.25,th*0.25,0,0,Math.PI*2);ctx.fill();
-      }
-      if(i>=1&&i<=5){
-        ctx.strokeStyle='rgba(200,170,120,0.08)';ctx.lineWidth=0.6;
-        ctx.beginPath();ctx.moveTo(sx-sw/2,sy+1);ctx.lineTo(sx+sw/2,sy+1);ctx.stroke();
-      }
-      ctx.fillStyle='rgba(255,255,255,0.12)';
-      ctx.beginPath();ctx.ellipse(sx,sy-th*0.4,sw*0.3,th*0.15,0,0,Math.PI*2);ctx.fill();
+    // ── TAIL FAN (transparent version) ──
+    const tBx=-22,tBy=2.5+a0;
+    const flick=this.swimBurst>0?Math.sin(time*18)*2:0;
+    ctx.fillStyle='rgba(180,210,195,0.25)';
+    ctx.beginPath();
+    ctx.moveTo(tBx,tBy-1);
+    ctx.quadraticCurveTo(tBx-6,tBy-4+flick*0.3,tBx-11,tBy-2.5+flick*0.4);
+    ctx.quadraticCurveTo(tBx-7,tBy-0.5,tBx,tBy);
+    ctx.fill();
+    ctx.fillStyle='rgba(185,215,200,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(tBx,tBy-0.5);
+    ctx.quadraticCurveTo(tBx-8,tBy,tBx-12,tBy+0.5);
+    ctx.quadraticCurveTo(tBx-8,tBy+1,tBx,tBy+0.8);
+    ctx.fill();
+    ctx.fillStyle='rgba(180,210,195,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(tBx,tBy+0.5);
+    ctx.quadraticCurveTo(tBx-6,tBy+4-flick*0.3,tBx-10,tBy+4-flick*0.4);
+    ctx.quadraticCurveTo(tBx-6,tBy+2.5,tBx,tBy+1.2);
+    ctx.fill();
+
+    // ── BODY: semi-transparent fill ──
+    bodyPath();
+    const bodyGrad=ctx.createRadialGradient(0,-2,0,0,0,22);
+    bodyGrad.addColorStop(0,'rgba(200,220,210,0.35)');
+    bodyGrad.addColorStop(0.6,'rgba(190,215,205,0.22)');
+    bodyGrad.addColorStop(1,'rgba(175,200,190,0.12)');
+    ctx.fillStyle=bodyGrad;
+    ctx.fill();
+
+    // ── Body outline ──
+    bodyPath();
+    ctx.strokeStyle='rgba(160,185,175,0.18)';
+    ctx.lineWidth=0.5;
+    ctx.stroke();
+
+    // ── Internal organs (visible through transparent body) ──
+    ctx.save();
+    bodyPath();
+    ctx.clip();
+    // Hepatopancreas (digestive gland — orange mass)
+    ctx.fillStyle='rgba(210,170,100,'+(0.1+Math.sin(time*0.8)*0.02).toFixed(3)+')';
+    ctx.beginPath();ctx.ellipse(5,-1+a5,5,3,0.1,0,Math.PI*2);ctx.fill();
+    // Gut line
+    ctx.strokeStyle='rgba(200,170,120,0.06)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(-18,1+a1);
+    ctx.bezierCurveTo(-10,0.5+a3,0,0+a4,12,0.5+a7);
+    ctx.stroke();
+    // Dorsal highlight
+    const hlG=ctx.createLinearGradient(0,-10,0,8);
+    hlG.addColorStop(0,'rgba(255,255,255,0.12)');
+    hlG.addColorStop(0.4,'rgba(0,0,0,0)');
+    hlG.addColorStop(1,'rgba(0,0,0,0.05)');
+    ctx.fillStyle=hlG;
+    ctx.fillRect(-24,-14,50,28);
+    ctx.restore();
+
+    // ── SEGMENT LINES ──
+    ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=0.4;
+    const segXs=[-18,-14,-10,-6,-2,2,5];
+    for(const sx of segXs){
+      const t=(sx+22)/44;
+      const aOff=ay(t);
+      const topY=lerp(0,-8.5,Math.min(t*1.3,1))+aOff;
+      const botY=lerp(3.5,7,Math.min(t*1.1,1))+aOff;
+      ctx.beginPath();ctx.moveTo(sx,topY);ctx.lineTo(sx,botY);ctx.stroke();
     }
 
-    // Pleopods
-    ctx.strokeStyle='rgba(180,200,190,0.25)';ctx.lineWidth=0.5;
+    // ── PLEOPODS ──
+    ctx.strokeStyle='rgba(170,195,185,0.18)';ctx.lineWidth=0.4;
+    for(let i=0;i<5;i++){
+      const lx=-16+i*4.5;const t=(lx+22)/44;const aOff=ay(t);
+      const baseY=lerp(3.5,6.5,Math.min(t*1.1,1))+aOff;
+      const swing=Math.sin(this.legPhase+i*1.1)*1.5;
+      ctx.beginPath();ctx.moveTo(lx,baseY);ctx.lineTo(lx+swing,baseY+4.5);ctx.stroke();
+    }
+
+    // ── PEREIOPODS ──
+    ctx.strokeStyle='rgba(170,195,185,0.28)';ctx.lineWidth=0.5;
     for(let i=0;i<4;i++){
-      const lx=-bodyLen+6+i*4;const ly=breath+3.5;const sw=Math.sin(this.legPhase+i*1.1)*2;
-      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+sw,ly+5);ctx.stroke();
+      const lx=7+i*3;const aOff=ay(0.65+i*0.06);
+      const baseY=6+aOff;const swing=Math.sin(this.legPhase*1.2+i*1.3)*1.5;
+      ctx.beginPath();ctx.moveTo(lx,baseY);ctx.lineTo(lx+swing*0.3,baseY+3.5);ctx.lineTo(lx+swing,baseY+6);ctx.stroke();
     }
 
-    // Walking legs
-    ctx.strokeStyle='rgba(180,200,190,0.35)';ctx.lineWidth=0.6;
-    for(let i=0;i<3;i++){
-      const lx=-2+i*3.5;const ly=breath+4;const sw=Math.sin(this.legPhase*1.2+i*1.3)*2;
-      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+sw*0.3,ly+4);ctx.lineTo(lx+sw,ly+7);ctx.stroke();
-    }
+    // ── ROSTRUM ──
+    ctx.fillStyle='rgba(185,210,200,0.25)';
+    ctx.beginPath();
+    ctx.moveTo(21,-3.5+a8);ctx.lineTo(25,-4.5+a8);ctx.lineTo(21,-2+a8);
+    ctx.closePath();ctx.fill();
 
-    // Head
-    const hx=3,hy=wave*0.3+breath;
-    const headGrad=ctx.createRadialGradient(hx-1,hy-2,0,hx,hy,headR+1);
-    headGrad.addColorStop(0,'rgba(200,225,215,0.45)');headGrad.addColorStop(1,'rgba(180,210,200,0.25)');
-    ctx.fillStyle=headGrad;ctx.beginPath();ctx.ellipse(hx,hy,headR+1.5,headR,0.03,0,Math.PI*2);ctx.fill();
-
-    // Eye
-    const eyeR=2.2*s;
-    ctx.globalAlpha=0.85;ctx.fillStyle='#222';
-    ctx.beginPath();ctx.arc(hx+4.5,hy-2,eyeR,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.8)';
-    ctx.beginPath();ctx.arc(hx+5,hy-2.5,eyeR*0.3,0,Math.PI*2);ctx.fill();
+    // ── EYE (proportionally small) ──
+    const eyeX=19.5,eyeY=-4.5+a8;
+    ctx.globalAlpha=0.75;
+    ctx.fillStyle='#222';
+    ctx.beginPath();ctx.arc(eyeX+0.3,eyeY,1.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath();ctx.arc(eyeX+0.7,eyeY-0.4,0.35,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=alpha;
 
-    // Rostrum
-    const tOff=this.jawMoving?Math.sin(this.tsumaPhase)*1.2:0;
-    ctx.fillStyle='rgba(185,210,200,0.4)';
-    ctx.beginPath();ctx.moveTo(hx+headR+1,hy-1);ctx.lineTo(hx+headR+5+tOff,hy-2);ctx.lineTo(hx+headR+1,hy+1);ctx.closePath();ctx.fill();
+    // ── ANTENNAE ──
+    ctx.globalAlpha=alpha*0.7;
+    this.drawAntennae(ctx,22,-3+a8,0.85,0.7);
+    ctx.globalAlpha=alpha;
 
-    // Antennae
-    ctx.globalAlpha=alpha*0.7;this.drawAntennae(ctx,hx+headR+1,hy-2,s*0.75);ctx.globalAlpha=alpha;
-
-    // Tsumatuma
+    // ── TSUMATUMA ──
     if(this.jawMoving){
-      const co=Math.sin(this.tsumaPhase)*1.8;
-      ctx.strokeStyle='rgba(180,200,190,0.35)';ctx.lineWidth=0.8;
-      ctx.beginPath();ctx.moveTo(hx+headR+2,hy-1);ctx.lineTo(hx+headR+6+tOff,hy-2-co);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(hx+headR+2,hy+1);ctx.lineTo(hx+headR+6+tOff,hy+2+co);ctx.stroke();
+      const co=Math.sin(this.tsumaPhase)*1.2;
+      ctx.strokeStyle='rgba(170,195,185,0.3)';ctx.lineWidth=0.6;
+      ctx.beginPath();ctx.moveTo(20,0.5+a8);ctx.lineTo(22+tOff,-0.5-co+a8);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(20,1.5+a8);ctx.lineTo(22+tOff,2+co+a8);ctx.stroke();
     }
 
-    // Environment reflection
-    ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.03;
-    ctx.fillStyle='rgba(150,220,255,1)';ctx.fillRect(-bodyLen-5,-8,bodyLen+18,4);
+    // ── ENVIRONMENT REFLECTION ──
+    ctx.globalCompositeOperation='screen';
+    ctx.globalAlpha=0.025;
+    ctx.fillStyle='rgba(150,220,255,1)';
+    ctx.fillRect(-24,-10,48,4);
     ctx.globalCompositeOperation='source-over';
     ctx.globalAlpha=1;ctx.restore();
   }
