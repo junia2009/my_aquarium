@@ -1,0 +1,21 @@
+{
+  "name": "癒し水槽 ― 海老育成",
+  "short_name": "癒し水槽",
+  "description": "癒しの水槽でエビを育てよう",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#042638",
+  "theme_color": "#2a8ab5",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
