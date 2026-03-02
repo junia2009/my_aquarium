@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>癒し水槽 ― 海老育成</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a1628;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', 'Yu Gothic UI', sans-serif;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #gameContainer {
+    position: relative;
+    width: 960px;
+    height: 600px;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(80,180,255,0.25), 0 0 120px rgba(40,100,180,0.15);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  /* UI Overlay */
+  #ui {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+  #topBar {
+    position: absolute;
+    top: 16px; left: 16px; right: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+  }
+  .status-panel {
+    background: rgba(10,30,60,0.45);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 10px 16px;
+    color: rgba(200,230,255,0.85);
+    font-size: 13px;
+    line-height: 1.6;
+    pointer-events: auto;
+  }
+  .status-panel .label { color: rgba(150,200,240,0.7); font-size: 11px; }
+  #shrimpInfo { text-align: right; }
+  .status-panel .value { font-weight: 600; }
+  .water-bar {
+    width: 100px; height: 6px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .water-bar-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #4fc3f7, #81d4fa);
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+  #bottomBar {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    pointer-events: auto;
+  }
+  .btn {
+    background: rgba(10,30,60,0.5);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(100,180,255,0.2);
+    border-radius: 12px;
+    padding: 10px 20px;
+    color: rgba(200,230,255,0.9);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:hover {
+    background: rgba(20,60,100,0.6);
+    border-color: rgba(100,180,255,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(80,180,255,0.15);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn .icon { font-size: 18px; }
+  #notification {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(10,30,60,0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 16px 28px;
+    color: rgba(220,240,255,0.95);
+    font-size: 15px;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+    text-align: center;
+  }
+  #notification.show { opacity: 1; }
+  #zoomHint {
+    position: absolute;
+    bottom: 60px;
+    right: 16px;
+    color: rgba(150,200,240,0.4);
+    font-size: 11px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="canvas"></canvas>
+  <div id="ui">
+    <div id="topBar">
+      <div class="status-panel">
+        <div><span class="label">水質</span></div>
+        <div class="water-bar"><div class="water-bar-fill" id="waterBar"></div></div>
+      </div>
+      <div class="status-panel" id="shrimpInfo">
+        <div><span class="label">赤白ビー：</span><span class="value" id="beeStatus">ツマツマ中</span></div>
+        <div><span class="label">透明エビ：</span><span class="value" id="clearStatus">水草の影</span></div>
+      </div>
+    </div>
+    <div id="bottomBar">
+      <button class="btn" id="feedBtn"><span class="icon">🍤</span>餌をあげる</button>
+      <button class="btn" id="cleanBtn"><span class="icon">💧</span>水換え</button>
+      <button class="btn" id="zoomInBtn"><span class="icon">🔍</span>近づく</button>
+      <button class="btn" id="zoomOutBtn"><span class="icon">🔭</span>離れる</button>
+    </div>
+    <div id="notification"></div>
+    <div id="zoomHint">マウスホイールでズーム ／ ドラッグで移動</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  癒し水槽ゲーム ― 海老育成アプリ
+// ============================================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = 960, H = 600;
+canvas.width = W; canvas.height = H;
+
+// ─── Time & Clock ───
+let time = 0;
+let lastTime = performance.now();
+
+// ─── Camera ───
+const camera = { x: 0, y: 0, zoom: 1, targetZoom: 1, targetX: 0, targetY: 0 };
+
+// ─── Water Quality ───
+let waterQuality = 100;
+
+// ─── Notification ───
+function notify(msg, duration = 2500) {
+  const el = document.getElementById('notification');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ============================================================
+//  UTILITY HELPERS
+// ============================================================
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+// ============================================================
+//  WATER PLANTS (Moss)
+// ============================================================
+class WaterPlant {
+  constructor(x, y, blades) {
+    this.x = x;
+    this.y = y;
+    this.blades = [];
+    for (let i = 0; i < blades; i++) {
+      this.blades.push({
+        angle: rand(-0.3, 0.3),
+        length: rand(25, 65),
+        width: rand(2, 5),
+        phase: rand(0, Math.PI * 2),
+        speed: rand(0.3, 0.7),
+        color: `hsl(${randInt(110, 145)}, ${randInt(50, 75)}%, ${randInt(35, 55)}%)`,
+        offsetX: rand(-12, 12),
+      });
+    }
+  }
+  draw(ctx, time) {
+    for (const b of this.blades) {
+      const sway = Math.sin(time * b.speed + b.phase) * 0.08;
+      const baseX = this.x + b.offsetX;
+      const baseY = this.y;
+      ctx.save();
+      ctx.translate(baseX, baseY);
+      ctx.rotate(b.angle + sway);
+      ctx.beginPath();
+      ctx.moveTo(-b.width / 2, 0);
+      ctx.quadraticCurveTo(-b.width / 3, -b.length * 0.5, 0, -b.length);
+      ctx.quadraticCurveTo(b.width / 3, -b.length * 0.5, b.width / 2, 0);
+      ctx.closePath();
+      ctx.fillStyle = b.color;
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+}
+
+const plants = [];
+// Dense clusters of moss
+const plantPositions = [
+  { x: 80, y: 530, n: 18 },
+  { x: 160, y: 535, n: 14 },
+  { x: 300, y: 540, n: 10 },
+  { x: 500, y: 528, n: 20 },
+  { x: 620, y: 535, n: 12 },
+  { x: 750, y: 530, n: 16 },
+  { x: 870, y: 538, n: 11 },
+  { x: 420, y: 545, n: 8 },
+  { x: 700, y: 542, n: 9 },
+  { x: 200, y: 540, n: 7 },
+];
+for (const p of plantPositions) {
+  plants.push(new WaterPlant(p.x, p.y, p.n));
+}
+
+// ============================================================
+//  FOOD PARTICLES
+// ============================================================
+const foods = [];
+class Food {
+  constructor(x) {
+    this.x = x;
+    this.y = 60;
+    this.targetY = rand(480, 530);
+    this.speed = rand(15, 25);
+    this.size = rand(2, 4);
+    this.eaten = false;
+    this.sway = rand(0, Math.PI * 2);
+    this.alpha = 1;
+  }
+  update(dt) {
+    if (this.eaten) {
+      this.alpha -= dt * 2;
+      return;
+    }
+    if (this.y < this.targetY) {
+      this.y += this.speed * dt;
+      this.x += Math.sin(time * 1.5 + this.sway) * 8 * dt;
+    }
+  }
+  draw(ctx) {
+    if (this.alpha <= 0) return;
+    ctx.globalAlpha = this.alpha;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = '#c8a060';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  get settled() { return this.y >= this.targetY - 2; }
+}
+
+// ============================================================
+//  MOLTED SHELL
+// ============================================================
+const shells = [];
+class MoltedShell {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.alpha = 0.7;
+    this.floatSpeed = rand(3, 8);
+    this.size = rand(6, 10);
+    this.color = color;
+  }
+  update(dt) {
+    this.y -= this.floatSpeed * dt;
+    this.x += Math.sin(time * 0.8) * 3 * dt;
+    this.alpha -= dt * 0.05;
+  }
+  draw(ctx) {
+    if (this.alpha <= 0) return;
+    ctx.globalAlpha = this.alpha * 0.6;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y, this.size, this.size * 0.5, 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ============================================================
+//  SHRIMP BASE CLASS
+// ============================================================
+const STATES = { TSUMATUMA: 0, WALK: 1, IDLE: 2, SWIM: 3, EAT: 4, FOLLOW: 5 };
+const STATE_NAMES_BEE = ['ツマツマ中', '歩き中', '休憩中', 'スイム！', 'お食事中', ''];
+const STATE_NAMES_CLEAR = ['ツマツマ中', '歩き中', '水草の影', 'スイム', 'お食事中', 'ついていく'];
+
+class Shrimp {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.targetX = x;
+    this.targetY = y;
+    this.state = STATES.TSUMATUMA;
+    this.stateTimer = 0;
+    this.stateDuration = rand(3, 8);
+    this.facing = 1; // 1 = right, -1 = left
+    this.legPhase = 0;
+    this.bodyWave = 0;
+    this.transparency = 0; // 0 = opaque, increases after molt
+    this.moltTimer = rand(60, 120);
+    this.speed = 20;
+    this.antennaePhase = rand(0, Math.PI * 2);
+    // Tsumatuma animation
+    this.tsumaPhase = 0;
+    this.jawMoving = false;
+  }
+
+  pickNewState() {
+    // Override in subclass
+  }
+
+  pickWalkTarget() {
+    this.targetX = clamp(this.x + rand(-120, 120), 60, W - 60);
+    this.targetY = clamp(rand(470, 540), 470, 545);
+  }
+
+  update(dt) {
+    this.stateTimer += dt;
+    this.legPhase += dt * 6;
+    this.bodyWave += dt * 2;
+    this.antennaePhase += dt * 3;
+    this.tsumaPhase += dt * 12;
+    this.moltTimer -= dt;
+
+    // Molt event
+    if (this.moltTimer <= 0) {
+      this.molt();
+      this.moltTimer = rand(90, 180);
+    }
+
+    // State transitions
+    if (this.stateTimer >= this.stateDuration) {
+      this.pickNewState();
+    }
+
+    // Movement
+    switch (this.state) {
+      case STATES.TSUMATUMA:
+        this.jawMoving = true;
+        // Slight bob
+        this.y += Math.sin(time * 2) * 0.1;
+        break;
+      case STATES.WALK:
+        this.jawMoving = false;
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 3) {
+          this.facing = dx > 0 ? 1 : -1;
+          this.x += (dx / dist) * this.speed * dt;
+          this.y += (dy / dist) * this.speed * 0.5 * dt;
+        } else {
+          this.stateTimer = this.stateDuration; // Force transition
+        }
+        break;
+      case STATES.IDLE:
+        this.jawMoving = false;
+        break;
+      case STATES.SWIM:
+        this.jawMoving = false;
+        const sdx = this.targetX - this.x;
+        const sdy = this.targetY - this.y;
+        const sdist = Math.sqrt(sdx * sdx + sdy * sdy);
+        if (sdist > 5) {
+          this.facing = sdx > 0 ? 1 : -1;
+          this.x += (sdx / sdist) * this.speed * 3 * dt;
+          this.y += (sdy / sdist) * this.speed * 2 * dt;
+        } else {
+          this.stateTimer = this.stateDuration;
+        }
+        break;
+      case STATES.EAT: {
+        this.jawMoving = true;
+        // Move toward nearest food
+        let nearest = null, minD = Infinity;
+        for (const f of foods) {
+          if (f.eaten || !f.settled) continue;
+          const fd = Math.abs(f.x - this.x) + Math.abs(f.y - this.y);
+          if (fd < minD) { minD = fd; nearest = f; }
+        }
+        if (nearest) {
+          const fdx = nearest.x - this.x;
+          const fdy = nearest.y - this.y;
+          const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
+          if (fdist > 8) {
+            this.facing = fdx > 0 ? 1 : -1;
+            this.x += (fdx / fdist) * this.speed * dt;
+            this.y += (fdy / fdist) * this.speed * 0.5 * dt;
+          } else {
+            nearest.eaten = true;
+          }
+        } else {
+          this.state = STATES.TSUMATUMA;
+          this.stateTimer = 0;
+          this.stateDuration = rand(3, 6);
+        }
+        break;
+      }
+      case STATES.FOLLOW:
+        this.jawMoving = false;
+        break;
+    }
+
+    this.x = clamp(this.x, 30, W - 30);
+    this.y = clamp(this.y, 400, 550);
+  }
+
+  molt() {
+    shells.push(new MoltedShell(this.x, this.y - 5, 'rgba(255,255,255,0.6)'));
+    this.transparency = Math.min(this.transparency + 0.08, 0.3);
+    notify('🦐 脱皮しました！ 殻がふわりと浮いていきます…');
+  }
+
+  drawAntennae(ctx, headX, headY, scale) {
+    const aSwing1 = Math.sin(this.antennaePhase) * 0.15;
+    const aSwing2 = Math.sin(this.antennaePhase + 1.2) * 0.12;
+    ctx.strokeStyle = 'rgba(200,180,160,0.5)';
+    ctx.lineWidth = 1;
+    // Antenna 1
+    ctx.beginPath();
+    ctx.moveTo(headX, headY);
+    const a1x = headX + this.facing * 25 * scale;
+    const a1y = headY - 15 * scale + aSwing1 * 10;
+    ctx.quadraticCurveTo(headX + this.facing * 12 * scale, headY - 20 * scale, a1x, a1y);
+    ctx.stroke();
+    // Antenna 2
+    ctx.beginPath();
+    ctx.moveTo(headX, headY + 2);
+    const a2x = headX + this.facing * 22 * scale;
+    const a2y = headY - 8 * scale + aSwing2 * 10;
+    ctx.quadraticCurveTo(headX + this.facing * 10 * scale, headY - 12 * scale, a2x, a2y);
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+//  RED-WHITE BEE SHRIMP
+// ============================================================
+class BeeShrimp extends Shrimp {
+  constructor() {
+    super(rand(300, 600), rand(490, 530));
+    this.speed = 18;
+  }
+
+  pickNewState() {
+    const r = Math.random();
+    if (foods.some(f => !f.eaten && f.settled)) {
+      this.state = STATES.EAT;
+      this.stateDuration = rand(4, 8);
+    } else if (r < 0.70) {
+      this.state = STATES.TSUMATUMA;
+      this.stateDuration = rand(4, 10);
+    } else if (r < 0.90) {
+      this.state = STATES.WALK;
+      this.pickWalkTarget();
+      this.stateDuration = rand(3, 7);
+    } else if (r < 0.98) {
+      this.state = STATES.IDLE;
+      this.stateDuration = rand(2, 5);
+    } else {
+      this.state = STATES.SWIM;
+      this.targetX = clamp(this.x + rand(-200, 200), 80, W - 80);
+      this.targetY = rand(420, 500);
+      this.stateDuration = rand(1, 2.5);
+    }
+    this.stateTimer = 0;
+    document.getElementById('beeStatus').textContent = STATE_NAMES_BEE[this.state];
+  }
+
+  draw(ctx) {
+    const s = 1;
+    const bodyLen = 32 * s;
+    const headR = 8 * s;
+    const segCount = 6;
+    const segLen = bodyLen / segCount;
+    const wave = Math.sin(this.bodyWave) * 1.5;
+    const tsumaOffset = this.jawMoving ? Math.sin(this.tsumaPhase) * 2 : 0;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(this.facing, 1);
+
+    // Transparency after molt
+    if (this.transparency > 0) {
+      ctx.globalAlpha = 1 - this.transparency * 0.3;
+    }
+
+    // Shadow (on sand)
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(0, 12, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Tail fan
+    const tailX = -bodyLen + 2;
+    const tailY = wave - 2;
+    ctx.fillStyle = '#cc3030';
+    ctx.beginPath();
+    ctx.ellipse(tailX - 6, tailY, 8, 4, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(tailX - 5, tailY - 1, 4, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body segments (red-white bands)
+    for (let i = segCount - 1; i >= 0; i--) {
+      const t = i / segCount;
+      const sx = -bodyLen + i * segLen + segLen / 2;
+      const sy = Math.sin(this.bodyWave + i * 0.4) * 1.5;
+      const segH = lerp(6, 9, 1 - Math.abs(t - 0.4) * 1.5) * s;
+      const segW = segLen * 1.1;
+      // Alternating red and white bands
+      const isRed = i % 2 === 0;
+      ctx.fillStyle = isRed ? '#cc3030' : '#f5ece0';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, segW / 2, segH, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Subtle sheen
+      ctx.fillStyle = isRed ? 'rgba(255,120,120,0.25)' : 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy - segH * 0.35, segW * 0.35, segH * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Legs (walking / tsumatuma)
+    ctx.strokeStyle = 'rgba(200,160,140,0.6)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const lx = -bodyLen + 6 + i * 6;
+      const ly = 5;
+      const legSwing = Math.sin(this.legPhase + i * 1.2) * 3;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + legSwing, ly + 6 + Math.abs(legSwing) * 0.5);
+      ctx.stroke();
+    }
+
+    // Head
+    const hx = 4;
+    const hy = wave * 0.5;
+    ctx.fillStyle = '#cc3030';
+    ctx.beginPath();
+    ctx.ellipse(hx, hy, headR + 2, headR, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // White face patch
+    ctx.fillStyle = '#f5ece0';
+    ctx.beginPath();
+    ctx.ellipse(hx + 3, hy - 1, headR * 0.6, headR * 0.5, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye (1.3x cute size)
+    const eyeSize = 3.2 * s;
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(hx + 5, hy - 3, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    // Eye highlight
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(hx + 6, hy - 4, eyeSize * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rostrum (nose)
+    ctx.fillStyle = '#cc3030';
+    ctx.beginPath();
+    ctx.moveTo(hx + headR, hy - 2);
+    ctx.lineTo(hx + headR + 8 + tsumaOffset, hy - 3);
+    ctx.lineTo(hx + headR, hy + 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Antennae
+    this.drawAntennae(ctx, hx + headR, hy - 4, s);
+
+    // Tsumatuma claws
+    if (this.jawMoving) {
+      const clawOpen = Math.sin(this.tsumaPhase) * 3;
+      ctx.strokeStyle = 'rgba(200,140,120,0.7)';
+      ctx.lineWidth = 1.5;
+      // Top claw
+      ctx.beginPath();
+      ctx.moveTo(hx + headR + 4, hy - 3);
+      ctx.lineTo(hx + headR + 10 + tsumaOffset, hy - 5 - clawOpen);
+      ctx.stroke();
+      // Bottom claw
+      ctx.beginPath();
+      ctx.moveTo(hx + headR + 4, hy + 1);
+      ctx.lineTo(hx + headR + 10 + tsumaOffset, hy + 3 + clawOpen);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  TRANSPARENT SHRIMP (Minami Numa Ebi)
+// ============================================================
+class ClearShrimp extends Shrimp {
+  constructor() {
+    super(rand(600, 800), rand(500, 540));
+    this.speed = 15;
+    this.baseAlpha = 0.45;
+  }
+
+  pickNewState() {
+    const r = Math.random();
+    if (foods.some(f => !f.eaten && f.settled)) {
+      // Delayed response to food
+      if (Math.random() < 0.6) {
+        this.state = STATES.EAT;
+        this.stateDuration = rand(5, 10);
+      } else {
+        this.state = STATES.TSUMATUMA;
+        this.stateDuration = rand(3, 6);
+      }
+    } else if (r < 0.55) {
+      this.state = STATES.TSUMATUMA;
+      this.stateDuration = rand(4, 12);
+    } else if (r < 0.75) {
+      this.state = STATES.WALK;
+      // Tends to stay near plants
+      const plant = plants[randInt(0, plants.length - 1)];
+      this.targetX = plant.x + rand(-30, 30);
+      this.targetY = clamp(plant.y - rand(5, 20), 480, 545);
+      this.stateDuration = rand(3, 7);
+    } else if (r < 0.88) {
+      this.state = STATES.IDLE;
+      this.stateDuration = rand(3, 8);
+    } else if (r < 0.95) {
+      // Follow Bee Shrimp
+      this.state = STATES.FOLLOW;
+      this.stateDuration = rand(4, 8);
+    } else {
+      this.state = STATES.SWIM;
+      this.targetX = clamp(this.x + rand(-150, 150), 80, W - 80);
+      this.targetY = rand(440, 510);
+      this.stateDuration = rand(1, 2);
+    }
+    this.stateTimer = 0;
+    document.getElementById('clearStatus').textContent = STATE_NAMES_CLEAR[this.state];
+  }
+
+  update(dt) {
+    super.update(dt);
+    // Follow behavior
+    if (this.state === STATES.FOLLOW && beeShrimp) {
+      const fdx = beeShrimp.x - 30 * this.facing - this.x;
+      const fdy = beeShrimp.y - this.y;
+      const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
+      if (fdist > 25) {
+        this.facing = fdx > 0 ? 1 : -1;
+        this.x += (fdx / fdist) * this.speed * 0.8 * dt;
+        this.y += (fdy / fdist) * this.speed * 0.3 * dt;
+      }
+    }
+  }
+
+  draw(ctx) {
+    const s = 0.85; // Slightly smaller
+    const bodyLen = 28 * s;
+    const headR = 6 * s;
+    const segCount = 5;
+    const segLen = bodyLen / segCount;
+    const wave = Math.sin(this.bodyWave) * 1;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(this.facing, 1);
+
+    const alpha = this.baseAlpha - this.transparency * 0.2;
+    ctx.globalAlpha = alpha;
+
+    // Shadow
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(0, 10, 16, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.globalAlpha = alpha;
+
+    // Tail
+    const tailX = -bodyLen + 2;
+    const tailY = wave - 1;
+    ctx.fillStyle = 'rgba(180,210,200,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(tailX - 4, tailY, 6, 3, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body segments (transparent)
+    for (let i = segCount - 1; i >= 0; i--) {
+      const t = i / segCount;
+      const sx = -bodyLen + i * segLen + segLen / 2;
+      const sy = Math.sin(this.bodyWave + i * 0.4) * 1;
+      const segH = lerp(4.5, 7, 1 - Math.abs(t - 0.4) * 1.5) * s;
+      const segW = segLen * 1.1;
+      // Transparent body with slight color
+      ctx.fillStyle = `rgba(200, 225, 215, ${0.35 + i * 0.03})`;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, segW / 2, segH, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Internal organs hint
+      if (i === 2 || i === 3) {
+        ctx.fillStyle = 'rgba(220,180,120,0.15)';
+        ctx.beginPath();
+        ctx.ellipse(sx, sy + 1, segW * 0.3, segH * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy - segH * 0.35, segW * 0.3, segH * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Legs
+    ctx.strokeStyle = 'rgba(180,200,190,0.4)';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const lx = -bodyLen + 5 + i * 5;
+      const ly = 4;
+      const legSwing = Math.sin(this.legPhase + i * 1.2) * 2.5;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + legSwing, ly + 5);
+      ctx.stroke();
+    }
+
+    // Head
+    const hx = 3;
+    const hy = wave * 0.3;
+    ctx.fillStyle = 'rgba(190,215,205,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(hx, hy, headR + 1, headR, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye (cute oversized)
+    const eyeSize = 2.5 * s;
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(hx + 4, hy - 2, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(hx + 4.6, hy - 2.8, eyeSize * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = alpha;
+
+    // Rostrum
+    const tsumaOff = this.jawMoving ? Math.sin(this.tsumaPhase) * 1.5 : 0;
+    ctx.fillStyle = 'rgba(180,210,200,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(hx + headR, hy - 1);
+    ctx.lineTo(hx + headR + 5 + tsumaOff, hy - 2);
+    ctx.lineTo(hx + headR, hy + 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Antennae
+    ctx.globalAlpha = alpha * 0.8;
+    this.drawAntennae(ctx, hx + headR, hy - 3, s * 0.8);
+
+    // Tsumatuma claws
+    if (this.jawMoving) {
+      const co = Math.sin(this.tsumaPhase) * 2;
+      ctx.strokeStyle = 'rgba(180,200,190,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx + headR + 2, hy - 2);
+      ctx.lineTo(hx + headR + 7 + tsumaOff, hy - 3 - co);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hx + headR + 2, hy + 1);
+      ctx.lineTo(hx + headR + 7 + tsumaOff, hy + 2 + co);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  CREATE SHRIMPS
+// ============================================================
+const beeShrimp = new BeeShrimp();
+const clearShrimp = new ClearShrimp();
+beeShrimp.pickNewState();
+clearShrimp.pickNewState();
+
+// ============================================================
+//  BUBBLES (ambient)
+// ============================================================
+const bubbles = [];
+function spawnBubble() {
+  bubbles.push({
+    x: rand(50, W - 50),
+    y: H + 10,
+    r: rand(1.5, 4),
+    speed: rand(15, 35),
+    wobble: rand(0, Math.PI * 2),
+    alpha: rand(0.15, 0.35),
+  });
+}
+setInterval(() => { if (Math.random() < 0.3) spawnBubble(); }, 1500);
+
+// ============================================================
+//  CAUSTICS (light patterns)
+// ============================================================
+function drawCaustics(ctx, t) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 8; i++) {
+    const cx = (W * 0.1) + (i * W * 0.12) + Math.sin(t * 0.4 + i * 1.3) * 30;
+    const cy = 80 + Math.cos(t * 0.3 + i * 0.9) * 20;
+    const r = 60 + Math.sin(t * 0.5 + i) * 20;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, `rgba(150,220,255,${0.04 + Math.sin(t * 0.3 + i) * 0.02})`);
+    grad.addColorStop(1, 'rgba(150,220,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Bottom caustics (on sand)
+  for (let i = 0; i < 12; i++) {
+    const cx = (i * W / 11) + Math.sin(t * 0.25 + i * 2.1) * 25;
+    const cy = 530 + Math.sin(t * 0.3 + i * 1.5) * 10;
+    const r = 35 + Math.sin(t * 0.35 + i) * 15;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, `rgba(180,230,255,${0.06 + Math.sin(t * 0.4 + i * 0.7) * 0.03})`);
+    grad.addColorStop(1, 'rgba(180,230,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ============================================================
+//  WATER SURFACE
+// ============================================================
+function drawWaterSurface(ctx, t) {
+  ctx.save();
+  // Surface ripple line
+  ctx.strokeStyle = 'rgba(200,235,255,0.25)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let x = 0; x <= W; x += 4) {
+    const y = 48 + Math.sin(x * 0.02 + t * 0.8) * 3 + Math.sin(x * 0.035 + t * 1.2) * 2;
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Light rays from surface
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 5; i++) {
+    const rx = 100 + i * 200 + Math.sin(t * 0.2 + i * 1.5) * 30;
+    const grad = ctx.createLinearGradient(rx, 50, rx + 20, 300);
+    grad.addColorStop(0, `rgba(180,230,255,${0.06 + Math.sin(t * 0.3 + i) * 0.02})`);
+    grad.addColorStop(1, 'rgba(180,230,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(rx - 15, 50);
+    ctx.lineTo(rx + 15, 50);
+    ctx.lineTo(rx + 30 + Math.sin(t * 0.4 + i) * 10, 350);
+    ctx.lineTo(rx - 10 + Math.sin(t * 0.35 + i) * 10, 350);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ============================================================
+//  BACKGROUND
+// ============================================================
+function drawBackground(ctx) {
+  // Gradient: light blue top → deeper blue bottom
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#b8e4f0');
+  bg.addColorStop(0.15, '#8dcfe8');
+  bg.addColorStop(0.5, '#5bacc8');
+  bg.addColorStop(0.85, '#3a8aaa');
+  bg.addColorStop(1, '#2d7090');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Depth blur effect (subtle darker bands)
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = '#1a3a50';
+    ctx.fillRect(0, H * 0.6 + i * 30, W, 20);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+//  SAND
+// ============================================================
+function drawSand(ctx) {
+  // White sand base
+  const sandGrad = ctx.createLinearGradient(0, 540, 0, H);
+  sandGrad.addColorStop(0, '#f0e8d8');
+  sandGrad.addColorStop(0.3, '#e8ddd0');
+  sandGrad.addColorStop(1, '#ddd0c0');
+  ctx.fillStyle = sandGrad;
+  ctx.beginPath();
+  ctx.moveTo(0, 548);
+  // Gentle undulation
+  for (let x = 0; x <= W; x += 2) {
+    const y = 548 + Math.sin(x * 0.015) * 4 + Math.sin(x * 0.04) * 2;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Sand grain texture
+  ctx.fillStyle = 'rgba(180,160,130,0.08)';
+  for (let i = 0; i < 60; i++) {
+    const gx = (i * 17 + 5) % W;
+    const gy = 555 + (i * 7) % 30;
+    ctx.beginPath();
+    ctx.arc(gx, gy, rand(0.8, 2), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Small pebbles
+  const pebbleColors = ['rgba(160,150,130,0.25)', 'rgba(140,130,115,0.2)', 'rgba(175,165,145,0.2)'];
+  const pebbles = [
+    {x:120,y:558,rx:6,ry:3},{x:340,y:562,rx:4,ry:2.5},{x:580,y:555,rx:5,ry:3},
+    {x:780,y:560,rx:7,ry:3},{x:900,y:557,rx:4,ry:2.5}
+  ];
+  for (const p of pebbles) {
+    ctx.fillStyle = pebbleColors[Math.floor(Math.random()*3)];
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, p.rx, p.ry, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ============================================================
+//  GLASS EDGES (tank frame)
+// ============================================================
+function drawGlass(ctx) {
+  // Subtle glass reflections on edges
+  ctx.save();
+  // Left edge
+  const lg = ctx.createLinearGradient(0, 0, 30, 0);
+  lg.addColorStop(0, 'rgba(200,235,255,0.15)');
+  lg.addColorStop(1, 'rgba(200,235,255,0)');
+  ctx.fillStyle = lg;
+  ctx.fillRect(0, 0, 30, H);
+  // Right edge
+  const rg = ctx.createLinearGradient(W, 0, W - 30, 0);
+  rg.addColorStop(0, 'rgba(200,235,255,0.15)');
+  rg.addColorStop(1, 'rgba(200,235,255,0)');
+  ctx.fillStyle = rg;
+  ctx.fillRect(W - 30, 0, 30, H);
+  // Top
+  const tg = ctx.createLinearGradient(0, 0, 0, 20);
+  tg.addColorStop(0, 'rgba(200,235,255,0.2)');
+  tg.addColorStop(1, 'rgba(200,235,255,0)');
+  ctx.fillStyle = tg;
+  ctx.fillRect(0, 0, W, 20);
+  ctx.restore();
+}
+
+// ============================================================
+//  MAIN RENDER LOOP
+// ============================================================
+function render(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  time += dt;
+
+  // ── Update ──
+  // Water quality slowly decreases
+  waterQuality = Math.max(0, waterQuality - dt * 0.03);
+  document.getElementById('waterBar').style.width = waterQuality + '%';
+
+  // Update shrimps
+  beeShrimp.update(dt);
+  clearShrimp.update(dt);
+
+  // Update food
+  for (const f of foods) f.update(dt);
+  // Remove eaten food
+  for (let i = foods.length - 1; i >= 0; i--) {
+    if (foods[i].alpha <= 0) foods.splice(i, 1);
+  }
+
+  // Update shells
+  for (const s of shells) s.update(dt);
+  for (let i = shells.length - 1; i >= 0; i--) {
+    if (shells[i].alpha <= 0) shells.splice(i, 1);
+  }
+
+  // Update bubbles
+  for (const b of bubbles) {
+    b.y -= b.speed * dt;
+    b.x += Math.sin(time * 1.5 + b.wobble) * 6 * dt;
+  }
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    if (bubbles[i].y < -10) bubbles.splice(i, 1);
+  }
+
+  // Camera smooth follow
+  camera.zoom = lerp(camera.zoom, camera.targetZoom, dt * 2);
+  camera.x = lerp(camera.x, camera.targetX, dt * 2);
+  camera.y = lerp(camera.y, camera.targetY, dt * 2);
+
+  // ── Draw ──
+  ctx.save();
+
+  // Apply camera
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(camera.zoom, camera.zoom);
+  ctx.translate(-W / 2 + camera.x, -H / 2 + camera.y);
+
+  // Background
+  drawBackground(ctx);
+
+  // Water surface
+  drawWaterSurface(ctx, time);
+
+  // Caustics
+  drawCaustics(ctx, time);
+
+  // Sand
+  drawSand(ctx);
+
+  // Plants (behind shrimps)
+  for (const p of plants) p.draw(ctx, time);
+
+  // Food
+  for (const f of foods) f.draw(ctx);
+
+  // Shells
+  for (const s of shells) s.draw(ctx);
+
+  // Shrimps (clear behind, bee in front for visibility)
+  clearShrimp.draw(ctx);
+  beeShrimp.draw(ctx);
+
+  // Bubbles
+  for (const b of bubbles) {
+    ctx.globalAlpha = b.alpha;
+    ctx.strokeStyle = 'rgba(200,240,255,0.6)';
+    ctx.lineWidth = 0.8;
+    ctx.fillStyle = 'rgba(200,240,255,0.08)';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Glass
+  drawGlass(ctx);
+
+  ctx.restore();
+
+  requestAnimationFrame(render);
+}
+
+// ============================================================
+//  INPUT HANDLERS
+// ============================================================
+// Feed button
+document.getElementById('feedBtn').addEventListener('click', () => {
+  for (let i = 0; i < randInt(3, 6); i++) {
+    foods.push(new Food(rand(200, W - 200)));
+  }
+  notify('🍤 餌を落としました');
+  // ビーが先に気付く
+  setTimeout(() => {
+    beeShrimp.state = STATES.EAT;
+    beeShrimp.stateTimer = 0;
+    beeShrimp.stateDuration = rand(6, 12);
+    document.getElementById('beeStatus').textContent = STATE_NAMES_BEE[STATES.EAT];
+  }, 800);
+  // 透明エビは遅れて反応
+  setTimeout(() => {
+    clearShrimp.state = STATES.EAT;
+    clearShrimp.stateTimer = 0;
+    clearShrimp.stateDuration = rand(6, 12);
+    document.getElementById('clearStatus').textContent = STATE_NAMES_CLEAR[STATES.EAT];
+  }, 2500);
+});
+
+// Water change
+document.getElementById('cleanBtn').addEventListener('click', () => {
+  waterQuality = Math.min(100, waterQuality + 30);
+  notify('💧 水を換えました。水質が改善しました');
+});
+
+// Zoom
+document.getElementById('zoomInBtn').addEventListener('click', () => {
+  camera.targetZoom = Math.min(2.5, camera.targetZoom + 0.3);
+});
+document.getElementById('zoomOutBtn').addEventListener('click', () => {
+  camera.targetZoom = Math.max(0.7, camera.targetZoom - 0.3);
+});
+
+// Mouse wheel zoom
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const d = e.deltaY > 0 ? -0.1 : 0.1;
+  camera.targetZoom = clamp(camera.targetZoom + d, 0.7, 2.5);
+}, { passive: false });
+
+// Drag to pan
+let dragging = false, dragStartX = 0, dragStartY = 0;
+canvas.addEventListener('mousedown', (e) => {
+  dragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const dx = (e.clientX - dragStartX) / camera.zoom;
+  const dy = (e.clientY - dragStartY) / camera.zoom;
+  camera.targetX += dx;
+  camera.targetY += dy;
+  camera.targetX = clamp(camera.targetX, -200, 200);
+  camera.targetY = clamp(camera.targetY, -100, 100);
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+});
+window.addEventListener('mouseup', () => { dragging = false; });
+
+// ============================================================
+//  START
+// ============================================================
+notify('🌊 癒し水槽へようこそ。静かな時間をお過ごしください。', 4000);
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
