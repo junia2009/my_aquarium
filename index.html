@@ -79,6 +79,17 @@
     max-width:80%;
   }
   #notif.show{opacity:1}
+  #infoBar{
+    position:absolute;bottom:0;left:0;right:0;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    padding:0 10px 2px;
+    pointer-events:none;
+    z-index:5;
+  }
+  #infoBar .inf{
+    color:rgba(150,195,230,0.4);
+    font-size:9px;letter-spacing:0.02em;
+  }
 </style>
 </head>
 <body>
@@ -103,6 +114,10 @@
     </div>
   </div>
   <div id="notif"></div>
+  <div id="infoBar">
+    <span class="inf" id="verInfo">v1.6.0</span>
+    <span class="inf" id="jstClock"></span>
+  </div>
 </div>
 
 <script>
@@ -112,6 +127,18 @@
 const C=document.getElementById('c'),X=C.getContext('2d');
 const W=400,H=780;
 C.width=W;C.height=H;
+
+// JST Clock
+function updateClock(){
+  const now=new Date();
+  const jst=new Date(now.getTime()+(now.getTimezoneOffset()+540)*60000);
+  const h=String(jst.getHours()).padStart(2,'0');
+  const m=String(jst.getMinutes()).padStart(2,'0');
+  const s=String(jst.getSeconds()).padStart(2,'0');
+  document.getElementById('jstClock').textContent=h+':'+m+':'+s+' JST';
+}
+updateClock();
+setInterval(updateClock,1000);
 
 let time=0,lt=performance.now();
 let wq=100;
