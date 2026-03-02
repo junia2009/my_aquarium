@@ -19,9 +19,11 @@
   #wrap{
     position:relative;
     width:100vw;height:100vh;height:100dvh;
-    max-width:430px;max-height:932px;
     overflow:hidden;
     box-shadow:0 0 60px rgba(40,140,220,0.12),0 0 120px rgba(20,60,140,0.08);
+  }
+  @media (orientation:portrait){
+    #wrap{max-width:430px;max-height:932px}
   }
   canvas{display:block;width:100%;height:100%}
   #ui{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
@@ -97,7 +99,7 @@
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v1.6.0</div>
+        <div class="sub-info" id="verInfo">v1.7.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo">
@@ -122,8 +124,19 @@
 //  癒し水槽 ― 海老育成アプリ  (Mobile / Advanced Water)
 // ============================================================
 const C=document.getElementById('c'),X=C.getContext('2d');
-const W=400,H=780;
-C.width=W;C.height=H;
+let W=400,H=780,SAND_Y=620;
+
+function resizeCanvas(){
+  const wrap=document.getElementById('wrap');
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  if(ww<=0||wh<=0)return;
+  const aspect=ww/wh;
+  if(aspect>=1){H=540;W=Math.min(Math.round(H*aspect),960);}
+  else{W=400;H=Math.min(Math.round(W/aspect),780);}
+  C.width=W;C.height=H;
+  SAND_Y=Math.round(H*0.795);
+  initTerrain();
+}
 
 // JST Clock
 function updateClock(){
@@ -402,10 +415,10 @@ function drawCaustics(ctx,t){
   ctx.globalCompositeOperation='screen';
   ctx.globalAlpha=0.35;
   // Draw caustics on sand area
-  ctx.drawImage(caustC,0,0,caustW,caustH, 0,580,W,H-580);
+  ctx.drawImage(caustC,0,0,caustW,caustH, 0,SAND_Y-40,W,H-SAND_Y+40);
   // Lighter caustics on mid-water region
   ctx.globalAlpha=0.08;
-  ctx.drawImage(caustC,0,0,caustW,caustH, 0,350,W,250);
+  ctx.drawImage(caustC,0,0,caustW,caustH, 0,H*0.45,W,H*0.32);
   ctx.restore();
 }
 
@@ -440,17 +453,7 @@ function drawHaze(ctx,t){
 // ============================================================
 //  SAND
 // ============================================================
-const SAND_Y=620;
-const sandGrains=[];
-for(let i=0;i<200;i++){
-  sandGrains.push({x:rand(0,W),y:rand(SAND_Y,H),r:rand(0.4,2),
-    color:`rgba(${randI(170,210)},${randI(158,192)},${randI(138,172)},${rand(0.05,0.16).toFixed(3)})`});
-}
-const pebbles=[];
-for(let i=0;i<8;i++){
-  pebbles.push({x:rand(20,W-20),y:rand(SAND_Y+4,SAND_Y+30),rx:rand(2,7),ry:rand(1.5,4),
-    rot:rand(-0.3,0.3),color:hsl(randI(25,42),randI(10,22),randI(50,65),rand(0.12,0.3)),hl:rand(0.04,0.12)});
-}
+const sandGrains=[],pebbles=[];
 
 function drawSand(ctx,t){
   const g=ctx.createLinearGradient(0,SAND_Y-6,0,H);
@@ -545,24 +548,49 @@ class WaterPlant{
 }
 
 const plants=[];
-const bgP=[
-  {x:25,y:SAND_Y+2,t:'moss',n:18},{x:75,y:SAND_Y,t:'stem',n:5},
-  {x:120,y:SAND_Y+3,t:'moss',n:14},{x:175,y:SAND_Y,t:'moss',n:16},
-  {x:215,y:SAND_Y-2,t:'stem',n:6},{x:260,y:SAND_Y+2,t:'moss',n:18},
-  {x:310,y:SAND_Y,t:'stem',n:4},{x:350,y:SAND_Y+3,t:'moss',n:12},
-  {x:385,y:SAND_Y,t:'moss',n:8},{x:50,y:SAND_Y+4,t:'moss',n:6},
-  {x:290,y:SAND_Y+4,t:'moss',n:5},{x:150,y:SAND_Y+5,t:'moss',n:5},
+const plantDefs=[
+  {xr:0.06,t:'moss',n:18},{xr:0.19,t:'stem',n:5},
+  {xr:0.30,t:'moss',n:14},{xr:0.44,t:'moss',n:16},
+  {xr:0.54,t:'stem',n:6},{xr:0.65,t:'moss',n:18},
+  {xr:0.78,t:'stem',n:4},{xr:0.88,t:'moss',n:12},
+  {xr:0.96,t:'moss',n:8},{xr:0.13,t:'moss',n:6},
+  {xr:0.73,t:'moss',n:5},{xr:0.38,t:'moss',n:5},
 ];
-for(const p of bgP)plants.push(new WaterPlant(p.x,p.y,p.t,p.n));
 
 // ============================================================
 //  FLOATING PARTICLES
 // ============================================================
 const parts=[];
-for(let i=0;i<40;i++){
-  parts.push({x:rand(0,W),y:rand(50,SAND_Y-20),vx:rand(-1.5,1.5),vy:rand(-0.8,0.8),
-    r:rand(0.3,1.3),alpha:rand(0.03,0.12),ph:rand(0,Math.PI*2)});
+
+function initTerrain(){
+  sandGrains.length=0;
+  const sandN=Math.round(200*(W/400));
+  for(let i=0;i<sandN;i++){
+    sandGrains.push({x:rand(0,W),y:rand(SAND_Y,H),r:rand(0.4,2),
+      color:`rgba(${randI(170,210)},${randI(158,192)},${randI(138,172)},${rand(0.05,0.16).toFixed(3)})`});
+  }
+  pebbles.length=0;
+  const pebN=Math.round(8*(W/400));
+  for(let i=0;i<pebN;i++){
+    pebbles.push({x:rand(20,W-20),y:rand(SAND_Y+4,SAND_Y+30),rx:rand(2,7),ry:rand(1.5,4),
+      rot:rand(-0.3,0.3),color:hsl(randI(25,42),randI(10,22),randI(50,65),rand(0.12,0.3)),hl:rand(0.04,0.12)});
+  }
+  plants.length=0;
+  for(const p of plantDefs){
+    plants.push(new WaterPlant(p.xr*W,SAND_Y+rand(-2,5),p.t,p.n));
+  }
+  parts.length=0;
+  const partN=Math.round(40*(W/400));
+  for(let i=0;i<partN;i++){
+    parts.push({x:rand(0,W),y:rand(50,SAND_Y-20),vx:rand(-1.5,1.5),vy:rand(-0.8,0.8),
+      r:rand(0.3,1.3),alpha:rand(0.03,0.12),ph:rand(0,Math.PI*2)});
+  }
+  if(typeof beeShrimp!=='undefined'){beeShrimp.x=clamp(beeShrimp.x,20,W-20);beeShrimp.y=clamp(beeShrimp.y,60,SAND_Y+2);}
+  if(typeof clearShrimp!=='undefined'){clearShrimp.x=clamp(clearShrimp.x,20,W-20);clearShrimp.y=clamp(clearShrimp.y,60,SAND_Y+2);}
 }
+resizeCanvas();
+window.addEventListener('resize',resizeCanvas);
+
 function updateParts(dt){
   for(const p of parts){
     p.x+=p.vx*dt+Math.sin(time*0.5+p.ph)*0.25*dt;
@@ -582,7 +610,7 @@ function drawParts(ctx){
 const bubs=[];
 function spawnBub(x,y){bubs.push({x:x||rand(30,W-30),y:y||H-rand(15,60),r:rand(0.8,3.8),sp:rand(15,35),wo:rand(0,Math.PI*2),wa:rand(3,10),al:rand(0.1,0.26)});}
 setInterval(()=>{if(Math.random()<0.3)spawnBub()},2000);
-for(let i=0;i<4;i++)spawnBub(rand(60,W-60),rand(200,500));
+for(let i=0;i<4;i++)spawnBub(rand(60,W-60),rand(H*0.26,H*0.64));
 
 function drawBubs(ctx,t){
   for(let i=bubs.length-1;i>=0;i--){
@@ -606,7 +634,7 @@ function drawBubs(ctx,t){
 // ============================================================
 const foods=[];
 class Food{
-  constructor(x){this.x=x;this.y=35;this.ty=rand(570,SAND_Y-5);this.sp=rand(10,20);this.sz=rand(1.5,3);
+  constructor(x){this.x=x;this.y=35;this.ty=rand(SAND_Y-50,SAND_Y-5);this.sp=rand(10,20);this.sz=rand(1.5,3);
     this.eaten=false;this.sw=rand(0,Math.PI*2);this.alpha=1;this.rot=rand(0,Math.PI*2);}
   update(dt){
     if(this.eaten){this.alpha-=dt*2.5;return;}
@@ -658,15 +686,15 @@ class Shrimp{
   }
   pickWT(){
     this.tx=clamp(this.x+rand(-80,80),30,W-30);
-    this.ty=clamp(rand(560,SAND_Y-5),550,SAND_Y);
+    this.ty=clamp(rand(SAND_Y-70,SAND_Y-5),SAND_Y-70,SAND_Y);
   }
   pickSwimT(){
     this.tx=clamp(this.x+rand(-100,100),35,W-35);
-    this.ty=clamp(this.y+rand(-120,-30),80,380);
+    this.ty=clamp(this.y+rand(-120,-30),H*0.1,H*0.49);
   }
   pickFloatT(){
     this.tx=clamp(this.x+rand(-50,50),35,W-35);
-    this.ty=clamp(this.y+rand(-40,40),80,400);
+    this.ty=clamp(this.y+rand(-40,40),H*0.1,H*0.51);
   }
   update(dt){
     this.st+=dt;
@@ -680,17 +708,17 @@ class Shrimp{
 
     switch(this.state){
       case ST.TSUMA:this.jm=true;
-        if(this.y<470){this.y+=this.speed*0.8*dt;this.x+=Math.sin(time*0.3+this.bp)*0.3;}
+        if(this.y<SAND_Y-H*0.19){this.y+=this.speed*0.8*dt;this.x+=Math.sin(time*0.3+this.bp)*0.3;}
         else{this.y+=Math.sin(time*1.8+this.bp)*0.06;}
         break;
       case ST.WALK:{
         this.jm=false;
-        if(this.y<470){this.ty=clamp(rand(560,SAND_Y-5),550,SAND_Y);}
+        if(this.y<SAND_Y-H*0.19){this.ty=clamp(rand(SAND_Y-70,SAND_Y-5),SAND_Y-70,SAND_Y);}
         const dx=this.tx-this.x,dy=this.ty-this.y,d=Math.sqrt(dx*dx+dy*dy);
         if(d>3){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*dt;}
         else this.st=this.sd;break;}
       case ST.IDLE:this.jm=false;
-        if(this.y<470){this.y+=this.speed*0.6*dt;this.x+=Math.sin(time*0.3+this.bp)*0.2;}
+        if(this.y<SAND_Y-H*0.19){this.y+=this.speed*0.6*dt;this.x+=Math.sin(time*0.3+this.bp)*0.2;}
         else{this.y+=Math.sin(time*1.2+this.bp)*0.04;}
         break;
       case ST.SWIM:{
@@ -755,7 +783,7 @@ class Shrimp{
 //  BEE SHRIMP — anatomical bezier silhouette
 // ============================================================
 class BeeShrimp extends Shrimp{
-  constructor(){super(rand(100,300),rand(575,SAND_Y-8));this.speed=15;}
+  constructor(){super(rand(W*0.25,W*0.75),rand(SAND_Y-45,SAND_Y-8));this.speed=15;}
   pickNewState(){
     const r=Math.random();
     if(foods.some(f=>!f.eaten&&f.settled)){this.state=ST.EAT;this.sd=rand(5,10);}
@@ -845,12 +873,12 @@ class BeeShrimp extends Shrimp{
 //  CLEAR SHRIMP — transparent anatomical
 // ============================================================
 class ClearShrimp extends Shrimp{
-  constructor(){super(rand(200,370),rand(580,SAND_Y-5));this.speed=13;this.bA=0.42;}
+  constructor(){super(rand(W*0.5,W*0.9),rand(SAND_Y-40,SAND_Y-5));this.speed=13;this.bA=0.42;}
   pickNewState(){
     const r=Math.random();
     if(foods.some(f=>!f.eaten&&f.settled)){if(Math.random()<.55){this.state=ST.EAT;this.sd=rand(5,10);}else{this.state=ST.TSUMA;this.sd=rand(3,6);}}
     else if(r<.30){this.state=ST.TSUMA;this.sd=rand(4,10);}
-    else if(r<.45){this.state=ST.WALK;const p=plants[randI(0,plants.length-1)];this.tx=p.x+rand(-20,20);this.ty=clamp(p.y-rand(3,15),565,SAND_Y);this.sd=rand(3,7);}
+    else if(r<.45){this.state=ST.WALK;const p=plants[randI(0,plants.length-1)];this.tx=p.x+rand(-20,20);this.ty=clamp(p.y-rand(3,15),SAND_Y-55,SAND_Y);this.sd=rand(3,7);}
     else if(r<.52){this.state=ST.IDLE;this.sd=rand(3,8);}
     else if(r<.60){this.state=ST.FOLLOW;this.sd=rand(4,8);}
     else if(r<.82){this.state=ST.SWIM;this.pickSwimT();this.sd=rand(5,12);}
@@ -994,7 +1022,7 @@ document.getElementById('feedBtn').addEventListener('click',()=>{
 });
 document.getElementById('cleanBtn').addEventListener('click',()=>{
   wq=Math.min(100,wq+30);notify('💧 水換え完了');
-  for(let i=0;i<6;i++)setTimeout(()=>spawnBub(rand(60,W-60),rand(450,600)),i*150);
+  for(let i=0;i<6;i++)setTimeout(()=>spawnBub(rand(60,W-60),rand(SAND_Y-170,SAND_Y-20)),i*150);
 });
 
 
