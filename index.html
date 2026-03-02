@@ -93,6 +93,7 @@
     <div id="bottomBar">
       <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
       <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
+      <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
 
     </div>
   </div>
@@ -961,6 +962,149 @@ document.getElementById('cleanBtn').addEventListener('click',()=>{
   for(let i=0;i<6;i++)setTimeout(()=>spawnBub(rand(60,W-60),rand(450,600)),i*150);
 });
 
+
+// ============================================================
+//  AMBIENT BGM — Web Audio API generative music
+// ============================================================
+const BGM=(()=>{
+  let ctx,master,started=false,playing=false;
+  const PENTA=[0,2,4,7,9]; // pentatonic intervals
+  const BASE=48; // C3 MIDI
+  const midi2f=n=>440*Math.pow(2,(n-69)/12);
+
+  function createReverb(ac,decay,wet){
+    const len=ac.sampleRate*decay;
+    const buf=ac.createBuffer(2,len,ac.sampleRate);
+    for(let ch=0;ch<2;ch++){
+      const d=buf.getChannelData(ch);
+      for(let i=0;i<len;i++){d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.2);}
+    }
+    const conv=ac.createConvolver();conv.buffer=buf;
+    const g=ac.createGain();g.gain.value=wet;
+    conv.connect(g);
+    return{input:conv,output:g};
+  }
+
+  function init(){
+    ctx=new(window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();master.gain.value=0;
+    // Master filter — underwater character
+    const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;lp.Q.value=0.5;
+    master.connect(lp);
+    // Reverb
+    const rev=createReverb(ctx,3.5,0.55);
+    lp.connect(rev.input);
+    lp.connect(ctx.destination);
+    rev.output.connect(ctx.destination);
+
+    // ── Layer 1: Deep drone pad ──
+    function drone(freq,detune,vol){
+      const o=ctx.createOscillator();o.type='sine';o.frequency.value=freq;o.detune.value=detune;
+      const g=ctx.createGain();g.gain.value=vol;
+      const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=0.06+Math.random()*0.04;
+      const lfoG=ctx.createGain();lfoG.gain.value=vol*0.3;
+      lfo.connect(lfoG);lfoG.connect(g.gain);
+      o.connect(g);g.connect(master);
+      o.start();lfo.start();
+    }
+    // C2 + G2 open fifth drone
+    drone(midi2f(36),0,0.08);
+    drone(midi2f(36),-8,0.06);
+    drone(midi2f(43),5,0.055);
+    drone(midi2f(43),-5,0.045);
+    // Sub bass
+    drone(midi2f(24),0,0.04);
+
+    // ── Layer 2: Warm pad (triangle, slow LFO) ──
+    function pad(freq,vol){
+      const o=ctx.createOscillator();o.type='triangle';o.frequency.value=freq;
+      const g=ctx.createGain();g.gain.value=0;
+      const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=0.03+Math.random()*0.02;
+      const lfoG=ctx.createGain();lfoG.gain.value=vol;
+      lfo.connect(lfoG);lfoG.connect(g.gain);
+      o.connect(g);g.connect(master);
+      o.start();lfo.start();
+    }
+    pad(midi2f(60),0.035); // C4
+    pad(midi2f(64),0.025); // E4
+    pad(midi2f(67),0.028); // G4
+
+    // ── Layer 3: Random bell tones (pentatonic) ──
+    function bell(){
+      if(!playing)return;
+      const oct=Math.random()<0.5?0:12;
+      const note=BASE+PENTA[Math.floor(Math.random()*PENTA.length)]+oct;
+      const freq=midi2f(note);
+
+      const o=ctx.createOscillator();
+      o.type='sine';o.frequency.value=freq;
+      const o2=ctx.createOscillator();
+      o2.type='sine';o2.frequency.value=freq*2.01; // slight inharmonic shimmer
+
+      const g=ctx.createGain();
+      const vol=0.04+Math.random()*0.025;
+      const now=ctx.currentTime;
+      g.gain.setValueAtTime(0,now);
+      g.gain.linearRampToValueAtTime(vol,now+0.08);
+      g.gain.exponentialRampToValueAtTime(0.001,now+4+Math.random()*3);
+
+      const g2=ctx.createGain();g2.gain.value=0.015;
+
+      o.connect(g);o2.connect(g2);g2.connect(g);g.connect(master);
+      o.start(now);o2.start(now);
+      o.stop(now+7);o2.stop(now+7);
+
+      setTimeout(bell,(2500+Math.random()*5000));
+    }
+    // Start multiple bell voices with offset
+    setTimeout(bell,1000);
+    setTimeout(bell,3200);
+    setTimeout(bell,5800);
+
+    // ── Layer 4: Occasional water shimmer (filtered noise burst) ──
+    function shimmer(){
+      if(!playing)return;
+      const dur=1.5+Math.random()*2;
+      const bufLen=ctx.sampleRate*dur;
+      const buf=ctx.createBuffer(1,bufLen,ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<bufLen;i++)d[i]=(Math.random()*2-1)*0.015;
+      const src=ctx.createBufferSource();src.buffer=buf;
+      const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=800+Math.random()*1200;bp.Q.value=2+Math.random()*3;
+      const g=ctx.createGain();
+      const now=ctx.currentTime;
+      g.gain.setValueAtTime(0,now);
+      g.gain.linearRampToValueAtTime(0.08+Math.random()*0.04,now+dur*0.3);
+      g.gain.linearRampToValueAtTime(0,now+dur);
+      src.connect(bp);bp.connect(g);g.connect(master);
+      src.start(now);
+      setTimeout(shimmer,6000+Math.random()*10000);
+    }
+    setTimeout(shimmer,4000);
+
+    started=true;
+  }
+
+  function fadeIn(){
+    if(!started)init();
+    if(ctx.state==='suspended')ctx.resume();
+    playing=true;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.linearRampToValueAtTime(1,ctx.currentTime+2);
+  }
+  function fadeOut(){
+    if(!started)return;
+    playing=false;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0,ctx.currentTime+1.5);
+  }
+  return{fadeIn,fadeOut,get playing(){return playing}};
+})();
+
+document.getElementById('bgmBtn').addEventListener('click',()=>{
+  if(BGM.playing){BGM.fadeOut();document.getElementById('bgmLbl').textContent='BGM';document.querySelector('#bgmBtn .ic').textContent='🔇';}
+  else{BGM.fadeIn();document.getElementById('bgmLbl').textContent='BGM';document.querySelector('#bgmBtn .ic').textContent='🔊';}
+});
 
 // ============================================================
 notify('🌊 癒し水槽へようこそ',3500);
