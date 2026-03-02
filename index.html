@@ -7,7 +7,7 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: #0a1628;
+    background: #060e1a;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -20,17 +20,15 @@
   #gameContainer {
     position: relative;
     width: 960px;
-    height: 600px;
-    border-radius: 18px;
+    height: 640px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 0 60px rgba(80,180,255,0.25), 0 0 120px rgba(40,100,180,0.15);
+    box-shadow:
+      0 0 80px rgba(60,160,240,0.18),
+      0 0 160px rgba(30,80,160,0.10),
+      inset 0 0 80px rgba(0,0,0,0.15);
   }
-  canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-  /* UI Overlay */
+  canvas { display: block; width: 100%; height: 100%; }
   #ui {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -38,29 +36,30 @@
   }
   #topBar {
     position: absolute;
-    top: 16px; left: 16px; right: 16px;
+    top: 14px; left: 14px; right: 14px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     pointer-events: none;
   }
   .status-panel {
-    background: rgba(10,30,60,0.45);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 10px 16px;
-    color: rgba(200,230,255,0.85);
-    font-size: 13px;
-    line-height: 1.6;
+    background: rgba(8,20,40,0.55);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-radius: 10px;
+    border: 1px solid rgba(100,180,255,0.08);
+    padding: 8px 14px;
+    color: rgba(190,225,255,0.85);
+    font-size: 12px;
+    line-height: 1.7;
     pointer-events: auto;
   }
-  .status-panel .label { color: rgba(150,200,240,0.7); font-size: 11px; }
-  #shrimpInfo { text-align: right; }
+  .status-panel .label { color: rgba(140,190,230,0.6); font-size: 10px; }
   .status-panel .value { font-weight: 600; }
+  #shrimpInfo { text-align: right; }
   .water-bar {
-    width: 100px; height: 6px;
-    background: rgba(255,255,255,0.12);
+    width: 100px; height: 5px;
+    background: rgba(255,255,255,0.08);
     border-radius: 3px;
     margin-top: 4px;
     overflow: hidden;
@@ -68,66 +67,65 @@
   .water-bar-fill {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #4fc3f7, #81d4fa);
+    background: linear-gradient(90deg, #3aa8d8, #7ecaea);
     border-radius: 3px;
     transition: width 0.8s ease;
   }
   #bottomBar {
     position: absolute;
-    bottom: 16px;
+    bottom: 14px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 12px;
+    gap: 10px;
     pointer-events: auto;
   }
   .btn {
-    background: rgba(10,30,60,0.5);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(100,180,255,0.2);
-    border-radius: 12px;
-    padding: 10px 20px;
-    color: rgba(200,230,255,0.9);
-    font-size: 13px;
+    background: rgba(8,20,40,0.55);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(100,180,255,0.1);
+    border-radius: 10px;
+    padding: 8px 16px;
+    color: rgba(190,225,255,0.88);
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
   .btn:hover {
-    background: rgba(20,60,100,0.6);
-    border-color: rgba(100,180,255,0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(80,180,255,0.15);
+    background: rgba(15,40,70,0.65);
+    border-color: rgba(100,180,255,0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(60,150,240,0.12);
   }
   .btn:active { transform: translateY(0); }
-  .btn .icon { font-size: 18px; }
+  .btn .icon { font-size: 16px; }
   #notification {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(10,30,60,0.6);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 16px 28px;
-    color: rgba(220,240,255,0.95);
-    font-size: 15px;
+    background: rgba(8,20,40,0.65);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border-radius: 14px;
+    border: 1px solid rgba(100,180,255,0.1);
+    padding: 14px 24px;
+    color: rgba(210,235,255,0.92);
+    font-size: 14px;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.8s ease;
     pointer-events: none;
     text-align: center;
   }
   #notification.show { opacity: 1; }
   #zoomHint {
     position: absolute;
-    bottom: 60px;
-    right: 16px;
-    color: rgba(150,200,240,0.4);
-    font-size: 11px;
+    bottom: 56px; right: 14px;
+    color: rgba(130,180,220,0.3);
+    font-size: 10px;
     pointer-events: none;
   }
 </style>
@@ -153,1048 +151,938 @@
       <button class="btn" id="zoomOutBtn"><span class="icon">🔭</span>離れる</button>
     </div>
     <div id="notification"></div>
-    <div id="zoomHint">マウスホイールでズーム ／ ドラッグで移動</div>
+    <div id="zoomHint">ホイール:ズーム ／ ドラッグ:移動</div>
   </div>
 </div>
 
 <script>
 // ============================================================
-//  癒し水槽ゲーム ― 海老育成アプリ
+//  癒し水槽ゲーム ― 海老育成アプリ  (Realistic Edition)
 // ============================================================
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const W = 960, H = 600;
+const W = 960, H = 640;
 canvas.width = W; canvas.height = H;
 
-// ─── Time & Clock ───
-let time = 0;
-let lastTime = performance.now();
-
-// ─── Camera ───
+let time = 0, lastTime = performance.now();
 const camera = { x: 0, y: 0, zoom: 1, targetZoom: 1, targetX: 0, targetY: 0 };
-
-// ─── Water Quality ───
 let waterQuality = 100;
 
-// ─── Notification ───
-function notify(msg, duration = 2500) {
-  const el = document.getElementById('notification');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), duration);
+// ─── Helpers ───
+function lerp(a,b,t){return a+(b-a)*t}
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v))}
+function rand(a,b){return a+Math.random()*(b-a)}
+function randInt(a,b){return Math.floor(rand(a,b+1))}
+function hsl(h,s,l,a){return a!==undefined?`hsla(${h},${s}%,${l}%,${a})`:`hsl(${h},${s}%,${l}%)`}
+
+function notify(msg, dur=2800){
+  const el=document.getElementById('notification');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur);
 }
 
 // ============================================================
-//  UTILITY HELPERS
+//  PROCEDURAL NOISE (simple Perlin-like)
 // ============================================================
-function lerp(a, b, t) { return a + (b - a) * t; }
-function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
-function rand(a, b) { return a + Math.random() * (b - a); }
-function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
-function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+const _perm=[];for(let i=0;i<512;i++)_perm[i]=(Math.random()*256)|0;
+function noise2d(x,y){
+  const X=Math.floor(x)&255,Y=Math.floor(y)&255;
+  const xf=x-Math.floor(x),yf=y-Math.floor(y);
+  const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const aa=_perm[(_perm[X]+Y)&511],ab=_perm[(_perm[X]+Y+1)&511];
+  const ba=_perm[(_perm[X+1]+Y)&511],bb=_perm[(_perm[X+1]+Y+1)&511];
+  const n=lerp(lerp(aa,ba,u),lerp(ab,bb,u),v)/255;
+  return n;
+}
 
 // ============================================================
-//  WATER PLANTS (Moss)
+//  BACKGROUND — realistic depth gradient
 // ============================================================
-class WaterPlant {
-  constructor(x, y, blades) {
-    this.x = x;
-    this.y = y;
-    this.blades = [];
-    for (let i = 0; i < blades; i++) {
+function drawBackground(ctx){
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#9cd4e8');
+  bg.addColorStop(0.06,'#7cc4de');
+  bg.addColorStop(0.15,'#5aadce');
+  bg.addColorStop(0.35,'#3d92b8');
+  bg.addColorStop(0.55,'#2d7a9e');
+  bg.addColorStop(0.75,'#1f6280');
+  bg.addColorStop(1,'#163e55');
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Depth haze layers
+  for(let i=0;i<6;i++){
+    const y=H*0.4+i*40;
+    ctx.globalAlpha=0.015+i*0.006;
+    ctx.fillStyle='#0d2a3d';
+    ctx.fillRect(0,y,W,35);
+  }
+  ctx.globalAlpha=1;
+
+  // Back wall texture (very subtle)
+  ctx.globalAlpha=0.03;
+  for(let y=0;y<H;y+=3){
+    for(let x=0;x<W;x+=3){
+      const n=noise2d(x*0.03,y*0.03+time*0.01);
+      if(n>0.52){
+        ctx.fillStyle='#fff';
+        ctx.fillRect(x,y,2,2);
+      }
+    }
+  }
+  ctx.globalAlpha=1;
+}
+
+// ============================================================
+//  WATER SURFACE — realistic ripple
+// ============================================================
+function drawWaterSurface(ctx,t){
+  ctx.save();
+  for(let layer=0;layer<3;layer++){
+    const alpha=[0.18,0.12,0.08][layer];
+    const freq=[0.018,0.028,0.045][layer];
+    const amp=[5,3,1.5][layer];
+    const speed=[0.6,0.9,1.4][layer];
+    ctx.strokeStyle=`rgba(220,245,255,${alpha})`;
+    ctx.lineWidth=[2.5,1.5,1][layer];
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=2){
+      const y=44+Math.sin(x*freq+t*speed)*amp
+        +Math.sin(x*freq*1.7+t*speed*0.6)*amp*0.5
+        +layer*2;
+      if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+
+  // Surface meniscus
+  const menGrad=ctx.createLinearGradient(0,38,0,52);
+  menGrad.addColorStop(0,'rgba(220,245,255,0.35)');
+  menGrad.addColorStop(1,'rgba(220,245,255,0)');
+  ctx.fillStyle=menGrad;
+  ctx.fillRect(0,38,W,14);
+
+  // Volumetric light rays
+  ctx.globalCompositeOperation='screen';
+  for(let i=0;i<7;i++){
+    const rx=80+i*135+Math.sin(t*0.15+i*2.1)*25;
+    const spread=40+Math.sin(t*0.2+i*1.3)*12;
+    const a=0.025+Math.sin(t*0.18+i*0.9)*0.012;
+    const grad=ctx.createLinearGradient(rx,45,rx+spread*0.3,H*0.75);
+    grad.addColorStop(0,`rgba(180,230,255,${a*2})`);
+    grad.addColorStop(0.3,`rgba(160,220,250,${a})`);
+    grad.addColorStop(1,'rgba(160,220,250,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.moveTo(rx-8,45);ctx.lineTo(rx+8,45);
+    ctx.lineTo(rx+spread,H*0.75);ctx.lineTo(rx-spread*0.7,H*0.75);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.globalCompositeOperation='source-over';
+  ctx.restore();
+}
+
+// ============================================================
+//  CAUSTICS — animated light patterns on sand
+// ============================================================
+function drawCaustics(ctx,t){
+  ctx.save();
+  ctx.globalCompositeOperation='screen';
+  for(let i=0;i<18;i++){
+    const baseX=(i%6)*170+40;
+    const baseY=480+Math.floor(i/6)*30;
+    const cx=baseX+Math.sin(t*0.3+i*1.7)*35+Math.cos(t*0.2+i*2.3)*20;
+    const cy=baseY+Math.cos(t*0.25+i*1.1)*15;
+    const rx=30+Math.sin(t*0.35+i)*12;
+    const ry=18+Math.cos(t*0.4+i*0.8)*8;
+    const a=0.04+Math.sin(t*0.3+i*1.5)*0.02;
+    const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,rx);
+    grad.addColorStop(0,`rgba(180,240,255,${a*1.8})`);
+    grad.addColorStop(0.5,`rgba(160,230,255,${a})`);
+    grad.addColorStop(1,'rgba(160,230,255,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.ellipse(cx,cy,rx,ry,Math.sin(t*0.15+i)*0.3,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.strokeStyle='rgba(180,240,255,0.035)';
+  ctx.lineWidth=1.5;
+  for(let i=0;i<12;i++){
+    const x1=i*85+Math.sin(t*0.25+i)*30;
+    const y1=510+Math.cos(t*0.3+i*1.2)*15;
+    const x2=x1+60+Math.sin(t*0.2+i*2)*25;
+    const y2=530+Math.sin(t*0.35+i*0.8)*12;
+    ctx.beginPath();ctx.moveTo(x1,y1);
+    ctx.quadraticCurveTo((x1+x2)/2,y1-10+Math.sin(t*0.4+i)*8,x2,y2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ============================================================
+//  SAND — realistic with layering
+// ============================================================
+const sandGrains=[];
+for(let i=0;i<300;i++){
+  sandGrains.push({
+    x:rand(0,W),y:rand(548,H),
+    r:rand(0.5,2.5),
+    color:`rgba(${randInt(170,210)},${randInt(160,195)},${randInt(140,175)},${rand(0.06,0.18)})`,
+  });
+}
+const pebbles=[];
+for(let i=0;i<12;i++){
+  pebbles.push({
+    x:rand(30,W-30),y:rand(552,580),
+    rx:rand(3,9),ry:rand(2,5),
+    rot:rand(-0.3,0.3),
+    color:hsl(randInt(25,45),randInt(10,25),randInt(50,68),rand(0.15,0.35)),
+    highlight:rand(0.05,0.15),
+  });
+}
+
+function drawSand(ctx,t){
+  const sandGrad=ctx.createLinearGradient(0,542,0,H);
+  sandGrad.addColorStop(0,'#ece2d0');
+  sandGrad.addColorStop(0.15,'#e4d8c6');
+  sandGrad.addColorStop(0.5,'#d8ccb8');
+  sandGrad.addColorStop(1,'#c8bca8');
+  ctx.fillStyle=sandGrad;
+  ctx.beginPath();ctx.moveTo(0,H);
+  for(let x=0;x<=W;x+=1){
+    const y=548+Math.sin(x*0.012+0.5)*5+Math.sin(x*0.035+1.2)*2.5+Math.sin(x*0.08)*1;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+
+  ctx.fillStyle='rgba(190,178,158,0.2)';
+  ctx.beginPath();ctx.moveTo(0,H);
+  for(let x=0;x<=W;x+=1){
+    const y=560+Math.sin(x*0.015+2)*3+Math.sin(x*0.04)*1.5;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+
+  for(const g of sandGrains){
+    ctx.fillStyle=g.color;
+    ctx.beginPath();ctx.arc(g.x,g.y,g.r,0,Math.PI*2);ctx.fill();
+  }
+
+  for(const p of pebbles){
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.ellipse(0,0,p.rx,p.ry,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(255,255,255,${p.highlight})`;
+    ctx.beginPath();ctx.ellipse(-p.rx*0.2,-p.ry*0.3,p.rx*0.5,p.ry*0.4,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.strokeStyle='rgba(180,170,150,0.06)';ctx.lineWidth=1;
+  for(let i=0;i<8;i++){
+    const y=555+i*5;
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=2){
+      const yy=y+Math.sin(x*0.04+i*0.8)*1.5;
+      if(x===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);
+    }
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+//  WATER PLANTS — realistic moss & stems
+// ============================================================
+class WaterPlant{
+  constructor(x,y,type,bladeCount){
+    this.x=x;this.y=y;this.type=type;
+    this.blades=[];
+    for(let i=0;i<bladeCount;i++){
       this.blades.push({
-        angle: rand(-0.3, 0.3),
-        length: rand(25, 65),
-        width: rand(2, 5),
-        phase: rand(0, Math.PI * 2),
-        speed: rand(0.3, 0.7),
-        color: `hsl(${randInt(110, 145)}, ${randInt(50, 75)}%, ${randInt(35, 55)}%)`,
-        offsetX: rand(-12, 12),
+        angle:rand(-0.35,0.35),
+        length:type==='moss'?rand(18,50):rand(40,90),
+        width:type==='moss'?rand(1.5,4):rand(2.5,6),
+        phase:rand(0,Math.PI*2),
+        speed:rand(0.2,0.5),
+        hue:type==='moss'?randInt(115,148):randInt(100,135),
+        sat:randInt(40,70),
+        light:randInt(28,50),
+        offsetX:rand(-15,15),
+        tipCurl:rand(0.1,0.4)*(Math.random()<0.5?1:-1),
+        segments:type==='stem'?randInt(3,5):1,
       });
     }
   }
-  draw(ctx, time) {
-    for (const b of this.blades) {
-      const sway = Math.sin(time * b.speed + b.phase) * 0.08;
-      const baseX = this.x + b.offsetX;
-      const baseY = this.y;
-      ctx.save();
-      ctx.translate(baseX, baseY);
-      ctx.rotate(b.angle + sway);
-      ctx.beginPath();
-      ctx.moveTo(-b.width / 2, 0);
-      ctx.quadraticCurveTo(-b.width / 3, -b.length * 0.5, 0, -b.length);
-      ctx.quadraticCurveTo(b.width / 3, -b.length * 0.5, b.width / 2, 0);
-      ctx.closePath();
-      ctx.fillStyle = b.color;
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+  draw(ctx,t){
+    for(const b of this.blades){
+      const sway=Math.sin(t*b.speed+b.phase)*0.06+Math.sin(t*b.speed*1.7+b.phase+1)*0.03;
+      const bx=this.x+b.offsetX;
+      const by=this.y;
+      ctx.save();ctx.translate(bx,by);ctx.rotate(b.angle+sway);
+
+      if(this.type==='moss'){
+        const grad=ctx.createLinearGradient(0,0,0,-b.length);
+        grad.addColorStop(0,hsl(b.hue,b.sat,b.light+5,0.9));
+        grad.addColorStop(0.7,hsl(b.hue+5,b.sat+5,b.light+10,0.85));
+        grad.addColorStop(1,hsl(b.hue+8,b.sat,b.light+15,0.7));
+        ctx.fillStyle=grad;
+        ctx.beginPath();ctx.moveTo(0,0);
+        ctx.bezierCurveTo(-b.width,-b.length*0.3,-b.width*0.8+b.tipCurl*5,-b.length*0.7,b.tipCurl*3,-b.length);
+        ctx.bezierCurveTo(b.width*0.8+b.tipCurl*5,-b.length*0.7,b.width,-b.length*0.3,0,0);
+        ctx.fill();
+        ctx.strokeStyle=hsl(b.hue-5,b.sat-10,b.light-5,0.15);
+        ctx.lineWidth=0.5;
+        ctx.beginPath();ctx.moveTo(0,0);
+        ctx.quadraticCurveTo(b.tipCurl*2,-b.length*0.5,b.tipCurl*3,-b.length);
+        ctx.stroke();
+      }else{
+        ctx.strokeStyle=hsl(b.hue,b.sat,b.light,0.8);
+        ctx.lineWidth=b.width*0.4;
+        let cx=0,cy=0;
+        const segH=b.length/b.segments;
+        for(let s=0;s<b.segments;s++){
+          const nx=cx+rand(-3,3)+b.tipCurl*2;
+          const ny=cy-segH;
+          ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx,ny);ctx.stroke();
+          if(s>0){
+            const leafLen=rand(8,16);
+            const leafDir=s%2===0?1:-1;
+            const leafSway=Math.sin(t*b.speed*0.8+s)*0.1;
+            ctx.save();ctx.translate(cx,cy);ctx.rotate(leafDir*0.8+leafSway);
+            const lg=ctx.createLinearGradient(0,0,leafLen,0);
+            lg.addColorStop(0,hsl(b.hue,b.sat,b.light,0.8));
+            lg.addColorStop(1,hsl(b.hue+10,b.sat,b.light+15,0.5));
+            ctx.fillStyle=lg;
+            ctx.beginPath();ctx.ellipse(leafLen/2,0,leafLen/2,3,0,0,Math.PI*2);ctx.fill();
+            ctx.restore();
+          }
+          cx=nx;cy=ny;
+        }
+      }
       ctx.restore();
     }
   }
 }
 
-const plants = [];
-// Dense clusters of moss
-const plantPositions = [
-  { x: 80, y: 530, n: 18 },
-  { x: 160, y: 535, n: 14 },
-  { x: 300, y: 540, n: 10 },
-  { x: 500, y: 528, n: 20 },
-  { x: 620, y: 535, n: 12 },
-  { x: 750, y: 530, n: 16 },
-  { x: 870, y: 538, n: 11 },
-  { x: 420, y: 545, n: 8 },
-  { x: 700, y: 542, n: 9 },
-  { x: 200, y: 540, n: 7 },
+const plants=[];
+const bgPlants=[
+  {x:60,y:550,type:'moss',n:22},{x:140,y:548,type:'stem',n:6},
+  {x:220,y:552,type:'moss',n:15},{x:350,y:548,type:'moss',n:18},
+  {x:430,y:545,type:'stem',n:8},{x:520,y:550,type:'moss',n:20},
+  {x:600,y:548,type:'stem',n:5},{x:680,y:552,type:'moss',n:16},
+  {x:760,y:548,type:'moss',n:12},{x:840,y:550,type:'stem',n:7},
+  {x:900,y:548,type:'moss',n:10},{x:180,y:553,type:'moss',n:8},
+  {x:480,y:555,type:'moss',n:6},{x:720,y:553,type:'moss',n:7},
 ];
-for (const p of plantPositions) {
-  plants.push(new WaterPlant(p.x, p.y, p.n));
+for(const p of bgPlants)plants.push(new WaterPlant(p.x,p.y,p.type,p.n));
+
+// ============================================================
+//  FLOATING PARTICLES (detritus / microorganisms)
+// ============================================================
+const particles=[];
+for(let i=0;i<50;i++){
+  particles.push({
+    x:rand(0,W),y:rand(60,540),
+    vx:rand(-2,2),vy:rand(-1,1),
+    r:rand(0.3,1.5),
+    alpha:rand(0.04,0.15),
+    phase:rand(0,Math.PI*2),
+  });
+}
+function updateParticles(dt){
+  for(const p of particles){
+    p.x+=p.vx*dt+Math.sin(time*0.5+p.phase)*0.3*dt;
+    p.y+=p.vy*dt+Math.cos(time*0.4+p.phase)*0.2*dt;
+    if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+    if(p.y<50)p.y=540;if(p.y>545)p.y=50;
+  }
+}
+function drawParticles(ctx){
+  for(const p of particles){
+    ctx.globalAlpha=p.alpha;
+    ctx.fillStyle='rgba(220,240,250,1)';
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
 }
 
 // ============================================================
-//  FOOD PARTICLES
+//  BUBBLES — realistic
 // ============================================================
-const foods = [];
-class Food {
-  constructor(x) {
-    this.x = x;
-    this.y = 60;
-    this.targetY = rand(480, 530);
-    this.speed = rand(15, 25);
-    this.size = rand(2, 4);
-    this.eaten = false;
-    this.sway = rand(0, Math.PI * 2);
-    this.alpha = 1;
+const bubbles=[];
+function spawnBubble(x,y){
+  bubbles.push({
+    x:x||rand(50,W-50),y:y||H-rand(20,80),
+    r:rand(1,4.5),speed:rand(18,40),
+    wobble:rand(0,Math.PI*2),wobbleAmp:rand(4,12),
+    alpha:rand(0.12,0.3),born:time,
+  });
+}
+setInterval(()=>{if(Math.random()<0.35)spawnBubble()},1800);
+for(let i=0;i<5;i++)spawnBubble(rand(100,W-100),rand(200,500));
+
+function drawBubbles(ctx,t){
+  for(let i=bubbles.length-1;i>=0;i--){
+    const b=bubbles[i];
+    b.y-=b.speed*(1/60);
+    b.x+=Math.sin(t*1.2+b.wobble)*b.wobbleAmp*(1/60);
+    if(b.y<46){bubbles.splice(i,1);continue;}
+    ctx.save();
+    ctx.globalAlpha=b.alpha;
+    ctx.strokeStyle='rgba(200,240,255,0.5)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.stroke();
+    const bg=ctx.createRadialGradient(b.x-b.r*0.3,b.y-b.r*0.3,0,b.x,b.y,b.r);
+    bg.addColorStop(0,'rgba(220,250,255,0.12)');bg.addColorStop(1,'rgba(200,240,255,0.02)');
+    ctx.fillStyle=bg;ctx.fill();
+    ctx.globalAlpha=b.alpha*1.5;
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath();ctx.arc(b.x-b.r*0.3,b.y-b.r*0.35,b.r*0.25,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=b.alpha*0.5;
+    ctx.fillStyle='rgba(255,255,255,0.2)';
+    ctx.beginPath();ctx.arc(b.x+b.r*0.15,b.y+b.r*0.25,b.r*0.15,0,Math.PI*2);ctx.fill();
+    ctx.restore();
   }
-  update(dt) {
-    if (this.eaten) {
-      this.alpha -= dt * 2;
-      return;
+}
+
+// ============================================================
+//  FOOD
+// ============================================================
+const foods=[];
+class Food{
+  constructor(x){
+    this.x=x;this.y=55;this.targetY=rand(490,535);
+    this.speed=rand(12,22);this.size=rand(1.8,3.5);
+    this.eaten=false;this.sway=rand(0,Math.PI*2);
+    this.alpha=1;this.rot=rand(0,Math.PI*2);
+  }
+  update(dt){
+    if(this.eaten){this.alpha-=dt*2.5;return}
+    if(this.y<this.targetY){
+      this.y+=this.speed*dt;
+      this.x+=Math.sin(time*1.2+this.sway)*6*dt;
+      this.rot+=dt*0.8;
     }
-    if (this.y < this.targetY) {
-      this.y += this.speed * dt;
-      this.x += Math.sin(time * 1.5 + this.sway) * 8 * dt;
-    }
   }
-  draw(ctx) {
-    if (this.alpha <= 0) return;
-    ctx.globalAlpha = this.alpha;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fillStyle = '#c8a060';
-    ctx.fill();
-    ctx.globalAlpha = 1;
+  draw(ctx){
+    if(this.alpha<=0)return;
+    ctx.save();ctx.globalAlpha=this.alpha;
+    ctx.translate(this.x,this.y);ctx.rotate(this.rot);
+    ctx.fillStyle='#b8884a';
+    ctx.beginPath();ctx.ellipse(0,0,this.size*1.2,this.size*0.8,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(200,160,100,0.5)';
+    ctx.beginPath();ctx.ellipse(-this.size*0.2,-this.size*0.2,this.size*0.4,this.size*0.3,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
   }
-  get settled() { return this.y >= this.targetY - 2; }
+  get settled(){return this.y>=this.targetY-2}
 }
 
 // ============================================================
 //  MOLTED SHELL
 // ============================================================
-const shells = [];
-class MoltedShell {
-  constructor(x, y, color) {
-    this.x = x;
-    this.y = y;
-    this.alpha = 0.7;
-    this.floatSpeed = rand(3, 8);
-    this.size = rand(6, 10);
-    this.color = color;
+const shells=[];
+class MoltedShell{
+  constructor(x,y,isRed){
+    this.x=x;this.y=y;this.alpha=0.6;
+    this.floatSpeed=rand(2,6);this.size=rand(5,9);
+    this.isRed=isRed;this.rot=rand(0,Math.PI*2);
+    this.rotSpeed=rand(-0.2,0.2);
   }
-  update(dt) {
-    this.y -= this.floatSpeed * dt;
-    this.x += Math.sin(time * 0.8) * 3 * dt;
-    this.alpha -= dt * 0.05;
+  update(dt){
+    this.y-=this.floatSpeed*dt;
+    this.x+=Math.sin(time*0.6+this.rot)*2*dt;
+    this.rot+=this.rotSpeed*dt;
+    this.alpha-=dt*0.04;
   }
-  draw(ctx) {
-    if (this.alpha <= 0) return;
-    ctx.globalAlpha = this.alpha * 0.6;
-    ctx.beginPath();
-    ctx.ellipse(this.x, this.y, this.size, this.size * 0.5, 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
-    ctx.fill();
-    ctx.globalAlpha = 1;
+  draw(ctx){
+    if(this.alpha<=0)return;
+    ctx.save();ctx.globalAlpha=this.alpha*0.5;
+    ctx.translate(this.x,this.y);ctx.rotate(this.rot);
+    ctx.fillStyle=this.isRed?'rgba(200,160,150,0.4)':'rgba(220,230,225,0.3)';
+    ctx.beginPath();ctx.ellipse(0,0,this.size,this.size*0.4,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.5;ctx.stroke();
+    ctx.restore();
   }
 }
 
 // ============================================================
-//  SHRIMP BASE CLASS
+//  SHRIMP BASE
 // ============================================================
-const STATES = { TSUMATUMA: 0, WALK: 1, IDLE: 2, SWIM: 3, EAT: 4, FOLLOW: 5 };
-const STATE_NAMES_BEE = ['ツマツマ中', '歩き中', '休憩中', 'スイム！', 'お食事中', ''];
-const STATE_NAMES_CLEAR = ['ツマツマ中', '歩き中', '水草の影', 'スイム', 'お食事中', 'ついていく'];
+const ST={TSUMA:0,WALK:1,IDLE:2,SWIM:3,EAT:4,FOLLOW:5};
+const SN_BEE=['ツマツマ中','歩き中','休憩中','スイム！','お食事中',''];
+const SN_CLR=['ツマツマ中','歩き中','水草の影','スイム','お食事中','ついていく'];
 
-class Shrimp {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.targetX = x;
-    this.targetY = y;
-    this.state = STATES.TSUMATUMA;
-    this.stateTimer = 0;
-    this.stateDuration = rand(3, 8);
-    this.facing = 1; // 1 = right, -1 = left
-    this.legPhase = 0;
-    this.bodyWave = 0;
-    this.transparency = 0; // 0 = opaque, increases after molt
-    this.moltTimer = rand(60, 120);
-    this.speed = 20;
-    this.antennaePhase = rand(0, Math.PI * 2);
-    // Tsumatuma animation
-    this.tsumaPhase = 0;
-    this.jawMoving = false;
+class Shrimp{
+  constructor(x,y){
+    this.x=x;this.y=y;this.targetX=x;this.targetY=y;
+    this.state=ST.TSUMA;this.stateTimer=0;this.stateDuration=rand(3,8);
+    this.facing=1;this.legPhase=0;this.bodyWave=0;
+    this.transparency=0;this.moltTimer=rand(60,120);
+    this.speed=20;this.antPhase=rand(0,Math.PI*2);
+    this.tsumaPhase=0;this.jawMoving=false;
+    this.swimBurst=0;this.breathPhase=rand(0,Math.PI*2);
   }
-
-  pickNewState() {
-    // Override in subclass
+  pickWalkTarget(){
+    this.targetX=clamp(this.x+rand(-130,130),60,W-60);
+    this.targetY=clamp(rand(480,545),475,550);
   }
+  update(dt){
+    this.stateTimer+=dt;
+    this.legPhase+=dt*(this.state===ST.WALK?8:this.state===ST.SWIM?14:5);
+    this.bodyWave+=dt*2;this.antPhase+=dt*2.5;
+    this.tsumaPhase+=dt*14;this.breathPhase+=dt*1.5;
+    this.moltTimer-=dt;
+    if(this.swimBurst>0)this.swimBurst-=dt*3;
+    if(this.moltTimer<=0){this.molt();this.moltTimer=rand(90,180);}
+    if(this.stateTimer>=this.stateDuration)this.pickNewState();
 
-  pickWalkTarget() {
-    this.targetX = clamp(this.x + rand(-120, 120), 60, W - 60);
-    this.targetY = clamp(rand(470, 540), 470, 545);
-  }
-
-  update(dt) {
-    this.stateTimer += dt;
-    this.legPhase += dt * 6;
-    this.bodyWave += dt * 2;
-    this.antennaePhase += dt * 3;
-    this.tsumaPhase += dt * 12;
-    this.moltTimer -= dt;
-
-    // Molt event
-    if (this.moltTimer <= 0) {
-      this.molt();
-      this.moltTimer = rand(90, 180);
-    }
-
-    // State transitions
-    if (this.stateTimer >= this.stateDuration) {
-      this.pickNewState();
-    }
-
-    // Movement
-    switch (this.state) {
-      case STATES.TSUMATUMA:
-        this.jawMoving = true;
-        // Slight bob
-        this.y += Math.sin(time * 2) * 0.1;
+    switch(this.state){
+      case ST.TSUMA:
+        this.jawMoving=true;
+        this.y+=Math.sin(time*1.8+this.breathPhase)*0.08;
         break;
-      case STATES.WALK:
-        this.jawMoving = false;
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 3) {
-          this.facing = dx > 0 ? 1 : -1;
-          this.x += (dx / dist) * this.speed * dt;
-          this.y += (dy / dist) * this.speed * 0.5 * dt;
-        } else {
-          this.stateTimer = this.stateDuration; // Force transition
-        }
-        break;
-      case STATES.IDLE:
-        this.jawMoving = false;
-        break;
-      case STATES.SWIM:
-        this.jawMoving = false;
-        const sdx = this.targetX - this.x;
-        const sdy = this.targetY - this.y;
-        const sdist = Math.sqrt(sdx * sdx + sdy * sdy);
-        if (sdist > 5) {
-          this.facing = sdx > 0 ? 1 : -1;
-          this.x += (sdx / sdist) * this.speed * 3 * dt;
-          this.y += (sdy / sdist) * this.speed * 2 * dt;
-        } else {
-          this.stateTimer = this.stateDuration;
-        }
-        break;
-      case STATES.EAT: {
-        this.jawMoving = true;
-        // Move toward nearest food
-        let nearest = null, minD = Infinity;
-        for (const f of foods) {
-          if (f.eaten || !f.settled) continue;
-          const fd = Math.abs(f.x - this.x) + Math.abs(f.y - this.y);
-          if (fd < minD) { minD = fd; nearest = f; }
-        }
-        if (nearest) {
-          const fdx = nearest.x - this.x;
-          const fdy = nearest.y - this.y;
-          const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
-          if (fdist > 8) {
-            this.facing = fdx > 0 ? 1 : -1;
-            this.x += (fdx / fdist) * this.speed * dt;
-            this.y += (fdy / fdist) * this.speed * 0.5 * dt;
-          } else {
-            nearest.eaten = true;
-          }
-        } else {
-          this.state = STATES.TSUMATUMA;
-          this.stateTimer = 0;
-          this.stateDuration = rand(3, 6);
-        }
+      case ST.WALK:{
+        this.jawMoving=false;
+        const dx=this.targetX-this.x,dy=this.targetY-this.y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d>3){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*0.4*dt;}
+        else this.stateTimer=this.stateDuration;
         break;
       }
-      case STATES.FOLLOW:
-        this.jawMoving = false;
+      case ST.IDLE:
+        this.jawMoving=false;this.y+=Math.sin(time*1.2+this.breathPhase)*0.05;
         break;
+      case ST.SWIM:{
+        this.jawMoving=false;this.swimBurst=1;
+        const dx=this.targetX-this.x,dy=this.targetY-this.y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d>5){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*3.5*dt;this.y+=(dy/d)*this.speed*2.5*dt;}
+        else this.stateTimer=this.stateDuration;
+        break;
+      }
+      case ST.EAT:{
+        this.jawMoving=true;
+        let near=null,minD=Infinity;
+        for(const f of foods){if(f.eaten||!f.settled)continue;const fd=Math.abs(f.x-this.x)+Math.abs(f.y-this.y);if(fd<minD){minD=fd;near=f;}}
+        if(near){const dx=near.x-this.x,dy=near.y-this.y;const d=Math.sqrt(dx*dx+dy*dy);
+          if(d>7){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*0.4*dt;}
+          else near.eaten=true;
+        }else{this.state=ST.TSUMA;this.stateTimer=0;this.stateDuration=rand(3,6);}
+        break;
+      }
+      case ST.FOLLOW:this.jawMoving=false;break;
     }
-
-    this.x = clamp(this.x, 30, W - 30);
-    this.y = clamp(this.y, 400, 550);
+    this.x=clamp(this.x,30,W-30);this.y=clamp(this.y,400,555);
   }
-
-  molt() {
-    shells.push(new MoltedShell(this.x, this.y - 5, 'rgba(255,255,255,0.6)'));
-    this.transparency = Math.min(this.transparency + 0.08, 0.3);
+  molt(){
+    shells.push(new MoltedShell(this.x,this.y-4,this instanceof BeeShrimp));
+    this.transparency=Math.min(this.transparency+0.06,0.25);
     notify('🦐 脱皮しました！ 殻がふわりと浮いていきます…');
   }
-
-  drawAntennae(ctx, headX, headY, scale) {
-    const aSwing1 = Math.sin(this.antennaePhase) * 0.15;
-    const aSwing2 = Math.sin(this.antennaePhase + 1.2) * 0.12;
-    ctx.strokeStyle = 'rgba(200,180,160,0.5)';
-    ctx.lineWidth = 1;
-    // Antenna 1
-    ctx.beginPath();
-    ctx.moveTo(headX, headY);
-    const a1x = headX + this.facing * 25 * scale;
-    const a1y = headY - 15 * scale + aSwing1 * 10;
-    ctx.quadraticCurveTo(headX + this.facing * 12 * scale, headY - 20 * scale, a1x, a1y);
+  drawShadow(ctx,w,h){
+    ctx.save();ctx.globalAlpha=0.10;
+    const sw=Math.sin(time*0.4)*0.03;
+    ctx.fillStyle='rgba(0,20,40,1)';
+    ctx.beginPath();ctx.ellipse(0,h+2,w*1.1,h*0.35,sw,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  drawAntennae(ctx,hx,hy,s){
+    const sw1=Math.sin(this.antPhase)*0.12;
+    const sw2=Math.sin(this.antPhase+1.5)*0.10;
+    ctx.lineWidth=0.7;
+    ctx.strokeStyle='rgba(180,160,140,0.4)';
+    ctx.beginPath();ctx.moveTo(hx+2,hy-1);
+    const a1x=hx+this.facing*30*s+Math.sin(this.antPhase*0.7)*4;
+    const a1y=hy-18*s+sw1*12;
+    ctx.bezierCurveTo(hx+this.facing*10*s,hy-12*s,hx+this.facing*20*s,hy-16*s+sw1*6,a1x,a1y);
     ctx.stroke();
-    // Antenna 2
-    ctx.beginPath();
-    ctx.moveTo(headX, headY + 2);
-    const a2x = headX + this.facing * 22 * scale;
-    const a2y = headY - 8 * scale + aSwing2 * 10;
-    ctx.quadraticCurveTo(headX + this.facing * 10 * scale, headY - 12 * scale, a2x, a2y);
+    ctx.strokeStyle='rgba(180,160,140,0.35)';
+    ctx.beginPath();ctx.moveTo(hx+1,hy+1);
+    const a2x=hx+this.facing*22*s+Math.sin(this.antPhase*0.9+0.5)*3;
+    const a2y=hy-8*s+sw2*10;
+    ctx.bezierCurveTo(hx+this.facing*8*s,hy-6*s,hx+this.facing*15*s,hy-8*s+sw2*4,a2x,a2y);
+    ctx.stroke();
+    ctx.strokeStyle='rgba(180,160,140,0.2)';
+    ctx.beginPath();ctx.moveTo(hx,hy+2);
+    ctx.quadraticCurveTo(hx+this.facing*8*s,hy+5*s,hx+this.facing*14*s,hy-2*s+sw2*5);
     ctx.stroke();
   }
 }
 
 // ============================================================
-//  RED-WHITE BEE SHRIMP
+//  BEE SHRIMP — detailed realistic
 // ============================================================
-class BeeShrimp extends Shrimp {
-  constructor() {
-    super(rand(300, 600), rand(490, 530));
-    this.speed = 18;
+class BeeShrimp extends Shrimp{
+  constructor(){super(rand(300,550),rand(495,530));this.speed=17;}
+  pickNewState(){
+    const r=Math.random();
+    if(foods.some(f=>!f.eaten&&f.settled)){this.state=ST.EAT;this.stateDuration=rand(5,10);}
+    else if(r<0.70){this.state=ST.TSUMA;this.stateDuration=rand(5,12);}
+    else if(r<0.90){this.state=ST.WALK;this.pickWalkTarget();this.stateDuration=rand(3,8);}
+    else if(r<0.98){this.state=ST.IDLE;this.stateDuration=rand(2,6);}
+    else{this.state=ST.SWIM;this.targetX=clamp(this.x+rand(-220,220),80,W-80);this.targetY=rand(420,500);this.stateDuration=rand(1,2);}
+    this.stateTimer=0;
+    document.getElementById('beeStatus').textContent=SN_BEE[this.state];
   }
+  draw(ctx){
+    const s=1.0;const bodyLen=34*s;const headR=9*s;
+    const segCount=7;const segLen=bodyLen/segCount;
+    const wave=Math.sin(this.bodyWave)*1.2;
+    const breath=Math.sin(this.breathPhase)*0.5;
+    const tOff=this.jawMoving?Math.sin(this.tsumaPhase)*1.8:0;
 
-  pickNewState() {
-    const r = Math.random();
-    if (foods.some(f => !f.eaten && f.settled)) {
-      this.state = STATES.EAT;
-      this.stateDuration = rand(4, 8);
-    } else if (r < 0.70) {
-      this.state = STATES.TSUMATUMA;
-      this.stateDuration = rand(4, 10);
-    } else if (r < 0.90) {
-      this.state = STATES.WALK;
-      this.pickWalkTarget();
-      this.stateDuration = rand(3, 7);
-    } else if (r < 0.98) {
-      this.state = STATES.IDLE;
-      this.stateDuration = rand(2, 5);
-    } else {
-      this.state = STATES.SWIM;
-      this.targetX = clamp(this.x + rand(-200, 200), 80, W - 80);
-      this.targetY = rand(420, 500);
-      this.stateDuration = rand(1, 2.5);
-    }
-    this.stateTimer = 0;
-    document.getElementById('beeStatus').textContent = STATE_NAMES_BEE[this.state];
-  }
+    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing,1);
+    if(this.transparency>0)ctx.globalAlpha=1-this.transparency*0.3;
 
-  draw(ctx) {
-    const s = 1;
-    const bodyLen = 32 * s;
-    const headR = 8 * s;
-    const segCount = 6;
-    const segLen = bodyLen / segCount;
-    const wave = Math.sin(this.bodyWave) * 1.5;
-    const tsumaOffset = this.jawMoving ? Math.sin(this.tsumaPhase) * 2 : 0;
+    this.drawShadow(ctx,24,8);
 
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.scale(this.facing, 1);
-
-    // Transparency after molt
-    if (this.transparency > 0) {
-      ctx.globalAlpha = 1 - this.transparency * 0.3;
-    }
-
-    // Shadow (on sand)
-    ctx.save();
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.ellipse(0, 12, 22, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Tail fan
-    const tailX = -bodyLen + 2;
-    const tailY = wave - 2;
-    ctx.fillStyle = '#cc3030';
-    ctx.beginPath();
-    ctx.ellipse(tailX - 6, tailY, 8, 4, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(tailX - 5, tailY - 1, 4, 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Body segments (red-white bands)
-    for (let i = segCount - 1; i >= 0; i--) {
-      const t = i / segCount;
-      const sx = -bodyLen + i * segLen + segLen / 2;
-      const sy = Math.sin(this.bodyWave + i * 0.4) * 1.5;
-      const segH = lerp(6, 9, 1 - Math.abs(t - 0.4) * 1.5) * s;
-      const segW = segLen * 1.1;
-      // Alternating red and white bands
-      const isRed = i % 2 === 0;
-      ctx.fillStyle = isRed ? '#cc3030' : '#f5ece0';
+    // TAIL FAN
+    const tailX=-bodyLen+1,tailY=wave*0.8;
+    for(let i=-1;i<=1;i++){
+      ctx.fillStyle=i===0?'rgba(200,50,40,0.7)':'rgba(200,50,40,0.5)';
       ctx.beginPath();
-      ctx.ellipse(sx, sy, segW / 2, segH, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Subtle sheen
-      ctx.fillStyle = isRed ? 'rgba(255,120,120,0.25)' : 'rgba(255,255,255,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy - segH * 0.35, segW * 0.35, segH * 0.25, 0, 0, Math.PI * 2);
+      ctx.ellipse(tailX-5+i*2,tailY+i*1.5,7+Math.abs(i),3-Math.abs(i)*0.5,
+        -0.15+i*0.25+(this.swimBurst>0?Math.sin(time*20)*0.3*i:0),0,Math.PI*2);
       ctx.fill();
     }
+    ctx.strokeStyle='rgba(255,200,180,0.2)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.ellipse(tailX-5,tailY,7,3,-0.15,0,Math.PI*2);ctx.stroke();
 
-    // Legs (walking / tsumatuma)
-    ctx.strokeStyle = 'rgba(200,160,140,0.6)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 5; i++) {
-      const lx = -bodyLen + 6 + i * 6;
-      const ly = 5;
-      const legSwing = Math.sin(this.legPhase + i * 1.2) * 3;
-      ctx.beginPath();
-      ctx.moveTo(lx, ly);
-      ctx.lineTo(lx + legSwing, ly + 6 + Math.abs(legSwing) * 0.5);
-      ctx.stroke();
-    }
+    // BODY SEGMENTS
+    for(let i=segCount-1;i>=0;i--){
+      const t0=i/segCount;
+      const sx=-bodyLen+i*segLen+segLen/2;
+      const sy=Math.sin(this.bodyWave+i*0.35)*1.2+breath;
+      const thickness=lerp(5.5,9.5,1-Math.pow(Math.abs(t0-0.35)*1.8,1.5))*s;
+      const sw=segLen*1.05;
+      const isRed=i%2===0;
+      const baseColor=isRed?[195,45,40]:[240,232,218];
+      ctx.fillStyle=`rgb(${baseColor[0]},${baseColor[1]},${baseColor[2]})`;
+      ctx.beginPath();ctx.ellipse(sx,sy,sw/2,thickness,0,0,Math.PI*2);ctx.fill();
 
-    // Head
-    const hx = 4;
-    const hy = wave * 0.5;
-    ctx.fillStyle = '#cc3030';
-    ctx.beginPath();
-    ctx.ellipse(hx, hy, headR + 2, headR, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // White face patch
-    ctx.fillStyle = '#f5ece0';
-    ctx.beginPath();
-    ctx.ellipse(hx + 3, hy - 1, headR * 0.6, headR * 0.5, 0.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Eye (1.3x cute size)
-    const eyeSize = 3.2 * s;
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(hx + 5, hy - 3, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-    // Eye highlight
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(hx + 6, hy - 4, eyeSize * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Rostrum (nose)
-    ctx.fillStyle = '#cc3030';
-    ctx.beginPath();
-    ctx.moveTo(hx + headR, hy - 2);
-    ctx.lineTo(hx + headR + 8 + tsumaOffset, hy - 3);
-    ctx.lineTo(hx + headR, hy + 1);
-    ctx.closePath();
-    ctx.fill();
-
-    // Antennae
-    this.drawAntennae(ctx, hx + headR, hy - 4, s);
-
-    // Tsumatuma claws
-    if (this.jawMoving) {
-      const clawOpen = Math.sin(this.tsumaPhase) * 3;
-      ctx.strokeStyle = 'rgba(200,140,120,0.7)';
-      ctx.lineWidth = 1.5;
-      // Top claw
-      ctx.beginPath();
-      ctx.moveTo(hx + headR + 4, hy - 3);
-      ctx.lineTo(hx + headR + 10 + tsumaOffset, hy - 5 - clawOpen);
-      ctx.stroke();
-      // Bottom claw
-      ctx.beginPath();
-      ctx.moveTo(hx + headR + 4, hy + 1);
-      ctx.lineTo(hx + headR + 10 + tsumaOffset, hy + 3 + clawOpen);
-      ctx.stroke();
-    }
-
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-}
-
-// ============================================================
-//  TRANSPARENT SHRIMP (Minami Numa Ebi)
-// ============================================================
-class ClearShrimp extends Shrimp {
-  constructor() {
-    super(rand(600, 800), rand(500, 540));
-    this.speed = 15;
-    this.baseAlpha = 0.45;
-  }
-
-  pickNewState() {
-    const r = Math.random();
-    if (foods.some(f => !f.eaten && f.settled)) {
-      // Delayed response to food
-      if (Math.random() < 0.6) {
-        this.state = STATES.EAT;
-        this.stateDuration = rand(5, 10);
-      } else {
-        this.state = STATES.TSUMATUMA;
-        this.stateDuration = rand(3, 6);
+      const hlGrad=ctx.createLinearGradient(sx,sy-thickness,sx,sy+thickness);
+      if(isRed){
+        hlGrad.addColorStop(0,'rgba(255,140,120,0.35)');hlGrad.addColorStop(0.4,'rgba(255,100,80,0.1)');
+        hlGrad.addColorStop(0.7,'rgba(150,20,15,0.15)');hlGrad.addColorStop(1,'rgba(120,15,10,0.25)');
+      }else{
+        hlGrad.addColorStop(0,'rgba(255,255,255,0.5)');hlGrad.addColorStop(0.3,'rgba(255,255,250,0.2)');
+        hlGrad.addColorStop(0.7,'rgba(230,220,200,0.1)');hlGrad.addColorStop(1,'rgba(200,190,170,0.2)');
       }
-    } else if (r < 0.55) {
-      this.state = STATES.TSUMATUMA;
-      this.stateDuration = rand(4, 12);
-    } else if (r < 0.75) {
-      this.state = STATES.WALK;
-      // Tends to stay near plants
-      const plant = plants[randInt(0, plants.length - 1)];
-      this.targetX = plant.x + rand(-30, 30);
-      this.targetY = clamp(plant.y - rand(5, 20), 480, 545);
-      this.stateDuration = rand(3, 7);
-    } else if (r < 0.88) {
-      this.state = STATES.IDLE;
-      this.stateDuration = rand(3, 8);
-    } else if (r < 0.95) {
-      // Follow Bee Shrimp
-      this.state = STATES.FOLLOW;
-      this.stateDuration = rand(4, 8);
-    } else {
-      this.state = STATES.SWIM;
-      this.targetX = clamp(this.x + rand(-150, 150), 80, W - 80);
-      this.targetY = rand(440, 510);
-      this.stateDuration = rand(1, 2);
-    }
-    this.stateTimer = 0;
-    document.getElementById('clearStatus').textContent = STATE_NAMES_CLEAR[this.state];
-  }
+      ctx.fillStyle=hlGrad;ctx.beginPath();ctx.ellipse(sx,sy,sw/2,thickness,0,0,Math.PI*2);ctx.fill();
 
-  update(dt) {
+      if(i<segCount-1){
+        ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=0.5;
+        const edgeX=-bodyLen+i*segLen;
+        ctx.beginPath();ctx.moveTo(edgeX,sy-thickness*0.7);ctx.lineTo(edgeX,sy+thickness*0.7);ctx.stroke();
+      }
+    }
+
+    // PLEOPODS
+    ctx.strokeStyle='rgba(200,140,120,0.3)';ctx.lineWidth=0.6;
+    for(let i=0;i<5;i++){
+      const lx=-bodyLen+8+i*5;
+      const ly=Math.sin(this.bodyWave+i*0.35)*1.2+breath+4;
+      const swing=Math.sin(this.legPhase+i*1.0)*3;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.quadraticCurveTo(lx+swing*0.5,ly+4,lx+swing,ly+7);ctx.stroke();
+      ctx.strokeStyle='rgba(200,150,130,0.15)';
+      ctx.beginPath();ctx.moveTo(lx+swing,ly+7);ctx.lineTo(lx+swing+1,ly+8.5);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(lx+swing,ly+7);ctx.lineTo(lx+swing-1,ly+8.5);ctx.stroke();
+      ctx.strokeStyle='rgba(200,140,120,0.3)';
+    }
+
+    // WALKING LEGS
+    ctx.strokeStyle='rgba(200,160,140,0.5)';ctx.lineWidth=0.8;
+    for(let i=0;i<4;i++){
+      const lx=-4+i*4;const ly=breath+5;
+      const swing=Math.sin(this.legPhase*1.2+i*1.4)*2.5;
+      const knee=ly+5;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+swing*0.4,knee);ctx.lineTo(lx+swing,knee+4);ctx.stroke();
+    }
+
+    // HEAD
+    const hx=5,hy=wave*0.4+breath;
+    const carapaceGrad=ctx.createRadialGradient(hx-2,hy-3,0,hx,hy,headR+3);
+    carapaceGrad.addColorStop(0,'#d84040');carapaceGrad.addColorStop(0.5,'#c53535');carapaceGrad.addColorStop(1,'#a82828');
+    ctx.fillStyle=carapaceGrad;
+    ctx.beginPath();ctx.ellipse(hx,hy,headR+2,headR+0.5,0.05,0,Math.PI*2);ctx.fill();
+
+    ctx.fillStyle='#f0e8da';
+    ctx.beginPath();ctx.ellipse(hx+4,hy-0.5,headR*0.55,headR*0.45,0.08,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.2)';
+    ctx.beginPath();ctx.ellipse(hx+3,hy-2,headR*0.3,headR*0.2,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,180,160,0.2)';
+    ctx.beginPath();ctx.ellipse(hx-1,hy-headR*0.55,headR*0.7,headR*0.3,0.1,0,Math.PI*2);ctx.fill();
+
+    // EYE
+    const eyeX=hx+7,eyeY=hy-3.5,eyeR=3.3*s;
+    ctx.fillStyle='rgba(180,70,60,0.6)';
+    ctx.beginPath();ctx.ellipse(eyeX-1.5,eyeY+1,2,1.5,0.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(eyeX,eyeY,eyeR,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(60,40,30,0.5)';ctx.lineWidth=0.8;ctx.beginPath();ctx.arc(eyeX,eyeY,eyeR,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.85)';ctx.beginPath();ctx.arc(eyeX+1,eyeY-1.2,eyeR*0.35,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(200,230,255,0.4)';ctx.beginPath();ctx.arc(eyeX-0.8,eyeY+1,eyeR*0.2,0,Math.PI*2);ctx.fill();
+
+    // ROSTRUM
+    ctx.fillStyle='#b83030';
+    ctx.beginPath();ctx.moveTo(hx+headR+1,hy-2);
+    ctx.quadraticCurveTo(hx+headR+7+tOff,hy-4,hx+headR+10+tOff,hy-3);
+    ctx.quadraticCurveTo(hx+headR+7+tOff,hy,hx+headR+1,hy+1);
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(180,40,30,0.3)';ctx.lineWidth=0.4;ctx.stroke();
+
+    // ANTENNAE
+    this.drawAntennae(ctx,hx+headR+1,hy-3,s);
+
+    // TSUMATUMA CLAWS
+    if(this.jawMoving){
+      const co=Math.sin(this.tsumaPhase)*2.5;
+      ctx.strokeStyle='rgba(200,130,110,0.6)';ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(hx+headR+3,hy-2);ctx.lineTo(hx+headR+10+tOff,hy-4-co);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(hx+headR+3,hy+1);ctx.lineTo(hx+headR+10+tOff,hy+3+co);ctx.stroke();
+      ctx.fillStyle='rgba(200,130,110,0.5)';
+      ctx.beginPath();ctx.arc(hx+headR+10+tOff,hy-4-co,1,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(hx+headR+10+tOff,hy+3+co,1,0,Math.PI*2);ctx.fill();
+    }
+
+    // LIGHT REFLECTION
+    ctx.globalCompositeOperation='screen';
+    ctx.globalAlpha=0.06+Math.sin(time*0.5)*0.02;
+    const envGrad=ctx.createLinearGradient(-bodyLen,0,10,0);
+    envGrad.addColorStop(0,'rgba(150,220,255,0)');envGrad.addColorStop(0.5,'rgba(150,220,255,1)');envGrad.addColorStop(1,'rgba(150,220,255,0)');
+    ctx.fillStyle=envGrad;ctx.fillRect(-bodyLen-10,-12,bodyLen+25,6);
+    ctx.globalCompositeOperation='source-over';
+    ctx.globalAlpha=1;ctx.restore();
+  }
+}
+
+// ============================================================
+//  CLEAR SHRIMP — realistic transparent
+// ============================================================
+class ClearShrimp extends Shrimp{
+  constructor(){super(rand(600,800),rand(505,540));this.speed=14;this.baseAlpha=0.42;}
+  pickNewState(){
+    const r=Math.random();
+    if(foods.some(f=>!f.eaten&&f.settled)){
+      if(Math.random()<0.55){this.state=ST.EAT;this.stateDuration=rand(5,10);}
+      else{this.state=ST.TSUMA;this.stateDuration=rand(3,6);}
+    }else if(r<0.55){this.state=ST.TSUMA;this.stateDuration=rand(5,14);}
+    else if(r<0.75){
+      this.state=ST.WALK;
+      const p=plants[randInt(0,plants.length-1)];
+      this.targetX=p.x+rand(-25,25);this.targetY=clamp(p.y-rand(5,18),485,550);
+      this.stateDuration=rand(3,7);
+    }else if(r<0.88){this.state=ST.IDLE;this.stateDuration=rand(3,9);}
+    else if(r<0.95){this.state=ST.FOLLOW;this.stateDuration=rand(4,8);}
+    else{this.state=ST.SWIM;this.targetX=clamp(this.x+rand(-150,150),80,W-80);this.targetY=rand(440,510);this.stateDuration=rand(1,2);}
+    this.stateTimer=0;
+    document.getElementById('clearStatus').textContent=SN_CLR[this.state];
+  }
+  update(dt){
     super.update(dt);
-    // Follow behavior
-    if (this.state === STATES.FOLLOW && beeShrimp) {
-      const fdx = beeShrimp.x - 30 * this.facing - this.x;
-      const fdy = beeShrimp.y - this.y;
-      const fdist = Math.sqrt(fdx * fdx + fdy * fdy);
-      if (fdist > 25) {
-        this.facing = fdx > 0 ? 1 : -1;
-        this.x += (fdx / fdist) * this.speed * 0.8 * dt;
-        this.y += (fdy / fdist) * this.speed * 0.3 * dt;
-      }
+    if(this.state===ST.FOLLOW&&beeShrimp){
+      const dx=beeShrimp.x-35*this.facing-this.x,dy=beeShrimp.y-this.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d>25){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*0.7*dt;this.y+=(dy/d)*this.speed*0.25*dt;}
     }
   }
+  draw(ctx){
+    const s=0.82;const bodyLen=28*s;const headR=6*s;
+    const segCount=6;const segLen=bodyLen/segCount;
+    const wave=Math.sin(this.bodyWave)*0.8;
+    const breath=Math.sin(this.breathPhase)*0.3;
+    const alpha=this.baseAlpha-this.transparency*0.15;
 
-  draw(ctx) {
-    const s = 0.85; // Slightly smaller
-    const bodyLen = 28 * s;
-    const headR = 6 * s;
-    const segCount = 5;
-    const segLen = bodyLen / segCount;
-    const wave = Math.sin(this.bodyWave) * 1;
-
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.scale(this.facing, 1);
-
-    const alpha = this.baseAlpha - this.transparency * 0.2;
-    ctx.globalAlpha = alpha;
-
-    // Shadow
-    ctx.save();
-    ctx.globalAlpha = 0.06;
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.ellipse(0, 10, 16, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.globalAlpha = alpha;
+    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing,1);
+    ctx.globalAlpha=alpha;
+    this.drawShadow(ctx,16,5);
+    ctx.globalAlpha=alpha;
 
     // Tail
-    const tailX = -bodyLen + 2;
-    const tailY = wave - 1;
-    ctx.fillStyle = 'rgba(180,210,200,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(tailX - 4, tailY, 6, 3, -0.15, 0, Math.PI * 2);
-    ctx.fill();
+    const tx=-bodyLen+1,ty=wave*0.6;
+    ctx.fillStyle='rgba(180,210,195,0.4)';
+    ctx.beginPath();ctx.ellipse(tx-4,ty,5.5,2.5,-0.12,0,Math.PI*2);ctx.fill();
 
-    // Body segments (transparent)
-    for (let i = segCount - 1; i >= 0; i--) {
-      const t = i / segCount;
-      const sx = -bodyLen + i * segLen + segLen / 2;
-      const sy = Math.sin(this.bodyWave + i * 0.4) * 1;
-      const segH = lerp(4.5, 7, 1 - Math.abs(t - 0.4) * 1.5) * s;
-      const segW = segLen * 1.1;
-      // Transparent body with slight color
-      ctx.fillStyle = `rgba(200, 225, 215, ${0.35 + i * 0.03})`;
-      ctx.beginPath();
-      ctx.ellipse(sx, sy, segW / 2, segH, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Internal organs hint
-      if (i === 2 || i === 3) {
-        ctx.fillStyle = 'rgba(220,180,120,0.15)';
-        ctx.beginPath();
-        ctx.ellipse(sx, sy + 1, segW * 0.3, segH * 0.3, 0, 0, Math.PI * 2);
-        ctx.fill();
+    // Body
+    for(let i=segCount-1;i>=0;i--){
+      const t0=i/segCount;
+      const sx=-bodyLen+i*segLen+segLen/2;
+      const sy=Math.sin(this.bodyWave+i*0.35)*0.8+breath;
+      const th=lerp(4,6.5,1-Math.pow(Math.abs(t0-0.35)*1.8,1.5))*s;
+      const sw=segLen*1.05;
+
+      const bodyGrad=ctx.createRadialGradient(sx,sy-th*0.2,0,sx,sy,th*1.2);
+      bodyGrad.addColorStop(0,`rgba(210,230,220,${0.35+i*0.02})`);
+      bodyGrad.addColorStop(0.6,`rgba(195,220,210,${0.25+i*0.02})`);
+      bodyGrad.addColorStop(1,`rgba(180,210,200,${0.15})`);
+      ctx.fillStyle=bodyGrad;ctx.beginPath();ctx.ellipse(sx,sy,sw/2,th,0,0,Math.PI*2);ctx.fill();
+
+      if(i>=2&&i<=4){
+        ctx.fillStyle=`rgba(215,175,110,${0.12+Math.sin(time*0.8+i)*0.03})`;
+        ctx.beginPath();ctx.ellipse(sx,sy+1,sw*0.25,th*0.25,0,0,Math.PI*2);ctx.fill();
       }
-      // Highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy - segH * 0.35, segW * 0.3, segH * 0.2, 0, 0, Math.PI * 2);
-      ctx.fill();
+      if(i>=1&&i<=5){
+        ctx.strokeStyle='rgba(200,170,120,0.08)';ctx.lineWidth=0.6;
+        ctx.beginPath();ctx.moveTo(sx-sw/2,sy+1);ctx.lineTo(sx+sw/2,sy+1);ctx.stroke();
+      }
+      ctx.fillStyle='rgba(255,255,255,0.12)';
+      ctx.beginPath();ctx.ellipse(sx,sy-th*0.4,sw*0.3,th*0.15,0,0,Math.PI*2);ctx.fill();
     }
 
-    // Legs
-    ctx.strokeStyle = 'rgba(180,200,190,0.4)';
-    ctx.lineWidth = 0.8;
-    for (let i = 0; i < 4; i++) {
-      const lx = -bodyLen + 5 + i * 5;
-      const ly = 4;
-      const legSwing = Math.sin(this.legPhase + i * 1.2) * 2.5;
-      ctx.beginPath();
-      ctx.moveTo(lx, ly);
-      ctx.lineTo(lx + legSwing, ly + 5);
-      ctx.stroke();
+    // Pleopods
+    ctx.strokeStyle='rgba(180,200,190,0.25)';ctx.lineWidth=0.5;
+    for(let i=0;i<4;i++){
+      const lx=-bodyLen+6+i*4;const ly=breath+3.5;const sw=Math.sin(this.legPhase+i*1.1)*2;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+sw,ly+5);ctx.stroke();
+    }
+
+    // Walking legs
+    ctx.strokeStyle='rgba(180,200,190,0.35)';ctx.lineWidth=0.6;
+    for(let i=0;i<3;i++){
+      const lx=-2+i*3.5;const ly=breath+4;const sw=Math.sin(this.legPhase*1.2+i*1.3)*2;
+      ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+sw*0.3,ly+4);ctx.lineTo(lx+sw,ly+7);ctx.stroke();
     }
 
     // Head
-    const hx = 3;
-    const hy = wave * 0.3;
-    ctx.fillStyle = 'rgba(190,215,205,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(hx, hy, headR + 1, headR, 0, 0, Math.PI * 2);
-    ctx.fill();
+    const hx=3,hy=wave*0.3+breath;
+    const headGrad=ctx.createRadialGradient(hx-1,hy-2,0,hx,hy,headR+1);
+    headGrad.addColorStop(0,'rgba(200,225,215,0.45)');headGrad.addColorStop(1,'rgba(180,210,200,0.25)');
+    ctx.fillStyle=headGrad;ctx.beginPath();ctx.ellipse(hx,hy,headR+1.5,headR,0.03,0,Math.PI*2);ctx.fill();
 
-    // Eye (cute oversized)
-    const eyeSize = 2.5 * s;
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(hx + 4, hy - 2, eyeSize, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(hx + 4.6, hy - 2.8, eyeSize * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.globalAlpha = alpha;
+    // Eye
+    const eyeR=2.2*s;
+    ctx.globalAlpha=0.85;ctx.fillStyle='#222';
+    ctx.beginPath();ctx.arc(hx+4.5,hy-2,eyeR,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    ctx.beginPath();ctx.arc(hx+5,hy-2.5,eyeR*0.3,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=alpha;
 
     // Rostrum
-    const tsumaOff = this.jawMoving ? Math.sin(this.tsumaPhase) * 1.5 : 0;
-    ctx.fillStyle = 'rgba(180,210,200,0.5)';
-    ctx.beginPath();
-    ctx.moveTo(hx + headR, hy - 1);
-    ctx.lineTo(hx + headR + 5 + tsumaOff, hy - 2);
-    ctx.lineTo(hx + headR, hy + 1);
-    ctx.closePath();
-    ctx.fill();
+    const tOff=this.jawMoving?Math.sin(this.tsumaPhase)*1.2:0;
+    ctx.fillStyle='rgba(185,210,200,0.4)';
+    ctx.beginPath();ctx.moveTo(hx+headR+1,hy-1);ctx.lineTo(hx+headR+5+tOff,hy-2);ctx.lineTo(hx+headR+1,hy+1);ctx.closePath();ctx.fill();
 
     // Antennae
-    ctx.globalAlpha = alpha * 0.8;
-    this.drawAntennae(ctx, hx + headR, hy - 3, s * 0.8);
+    ctx.globalAlpha=alpha*0.7;this.drawAntennae(ctx,hx+headR+1,hy-2,s*0.75);ctx.globalAlpha=alpha;
 
-    // Tsumatuma claws
-    if (this.jawMoving) {
-      const co = Math.sin(this.tsumaPhase) * 2;
-      ctx.strokeStyle = 'rgba(180,200,190,0.4)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(hx + headR + 2, hy - 2);
-      ctx.lineTo(hx + headR + 7 + tsumaOff, hy - 3 - co);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(hx + headR + 2, hy + 1);
-      ctx.lineTo(hx + headR + 7 + tsumaOff, hy + 2 + co);
-      ctx.stroke();
+    // Tsumatuma
+    if(this.jawMoving){
+      const co=Math.sin(this.tsumaPhase)*1.8;
+      ctx.strokeStyle='rgba(180,200,190,0.35)';ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.moveTo(hx+headR+2,hy-1);ctx.lineTo(hx+headR+6+tOff,hy-2-co);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(hx+headR+2,hy+1);ctx.lineTo(hx+headR+6+tOff,hy+2+co);ctx.stroke();
     }
 
-    ctx.globalAlpha = 1;
-    ctx.restore();
+    // Environment reflection
+    ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.03;
+    ctx.fillStyle='rgba(150,220,255,1)';ctx.fillRect(-bodyLen-5,-8,bodyLen+18,4);
+    ctx.globalCompositeOperation='source-over';
+    ctx.globalAlpha=1;ctx.restore();
   }
 }
 
 // ============================================================
 //  CREATE SHRIMPS
 // ============================================================
-const beeShrimp = new BeeShrimp();
-const clearShrimp = new ClearShrimp();
-beeShrimp.pickNewState();
-clearShrimp.pickNewState();
+const beeShrimp=new BeeShrimp();
+const clearShrimp=new ClearShrimp();
+beeShrimp.pickNewState();clearShrimp.pickNewState();
 
 // ============================================================
-//  BUBBLES (ambient)
+//  GLASS EFFECT
 // ============================================================
-const bubbles = [];
-function spawnBubble() {
-  bubbles.push({
-    x: rand(50, W - 50),
-    y: H + 10,
-    r: rand(1.5, 4),
-    speed: rand(15, 35),
-    wobble: rand(0, Math.PI * 2),
-    alpha: rand(0.15, 0.35),
-  });
-}
-setInterval(() => { if (Math.random() < 0.3) spawnBubble(); }, 1500);
-
-// ============================================================
-//  CAUSTICS (light patterns)
-// ============================================================
-function drawCaustics(ctx, t) {
+function drawGlass(ctx){
   ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 8; i++) {
-    const cx = (W * 0.1) + (i * W * 0.12) + Math.sin(t * 0.4 + i * 1.3) * 30;
-    const cy = 80 + Math.cos(t * 0.3 + i * 0.9) * 20;
-    const r = 60 + Math.sin(t * 0.5 + i) * 20;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    grad.addColorStop(0, `rgba(150,220,255,${0.04 + Math.sin(t * 0.3 + i) * 0.02})`);
-    grad.addColorStop(1, 'rgba(150,220,255,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // Bottom caustics (on sand)
-  for (let i = 0; i < 12; i++) {
-    const cx = (i * W / 11) + Math.sin(t * 0.25 + i * 2.1) * 25;
-    const cy = 530 + Math.sin(t * 0.3 + i * 1.5) * 10;
-    const r = 35 + Math.sin(t * 0.35 + i) * 15;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    grad.addColorStop(0, `rgba(180,230,255,${0.06 + Math.sin(t * 0.4 + i * 0.7) * 0.03})`);
-    grad.addColorStop(1, 'rgba(180,230,255,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
+  const vl=ctx.createLinearGradient(0,0,40,0);
+  vl.addColorStop(0,'rgba(0,10,20,0.2)');vl.addColorStop(1,'rgba(0,10,20,0)');
+  ctx.fillStyle=vl;ctx.fillRect(0,0,40,H);
+  const vr=ctx.createLinearGradient(W,0,W-40,0);
+  vr.addColorStop(0,'rgba(0,10,20,0.2)');vr.addColorStop(1,'rgba(0,10,20,0)');
+  ctx.fillStyle=vr;ctx.fillRect(W-40,0,40,H);
+  const vt=ctx.createLinearGradient(0,0,0,25);
+  vt.addColorStop(0,'rgba(0,10,20,0.15)');vt.addColorStop(1,'rgba(0,10,20,0)');
+  ctx.fillStyle=vt;ctx.fillRect(0,0,W,25);
+  const vb=ctx.createLinearGradient(0,H,0,H-30);
+  vb.addColorStop(0,'rgba(0,10,20,0.2)');vb.addColorStop(1,'rgba(0,10,20,0)');
+  ctx.fillStyle=vb;ctx.fillRect(0,H-30,W,30);
+  ctx.globalAlpha=0.04;ctx.fillStyle='rgba(200,240,255,1)';
+  ctx.fillRect(18,30,2,H-60);
+  ctx.globalAlpha=0.025;ctx.fillRect(24,50,1,H-100);
+  ctx.globalAlpha=0.03;ctx.fillRect(W-20,40,1.5,H-80);
+  ctx.globalAlpha=1;ctx.restore();
 }
 
 // ============================================================
-//  WATER SURFACE
+//  MAIN LOOP
 // ============================================================
-function drawWaterSurface(ctx, t) {
+function render(now){
+  const dt=Math.min((now-lastTime)/1000,0.05);
+  lastTime=now;time+=dt;
+
+  waterQuality=Math.max(0,waterQuality-dt*0.025);
+  document.getElementById('waterBar').style.width=waterQuality+'%';
+
+  beeShrimp.update(dt);clearShrimp.update(dt);
+  updateParticles(dt);
+
+  for(const f of foods)f.update(dt);
+  for(let i=foods.length-1;i>=0;i--)if(foods[i].alpha<=0)foods.splice(i,1);
+  for(const s of shells)s.update(dt);
+  for(let i=shells.length-1;i>=0;i--)if(shells[i].alpha<=0)shells.splice(i,1);
+
+  camera.zoom=lerp(camera.zoom,camera.targetZoom,dt*2.5);
+  camera.x=lerp(camera.x,camera.targetX,dt*2.5);
+  camera.y=lerp(camera.y,camera.targetY,dt*2.5);
+
   ctx.save();
-  // Surface ripple line
-  ctx.strokeStyle = 'rgba(200,235,255,0.25)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let x = 0; x <= W; x += 4) {
-    const y = 48 + Math.sin(x * 0.02 + t * 0.8) * 3 + Math.sin(x * 0.035 + t * 1.2) * 2;
-    if (x === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
+  ctx.translate(W/2,H/2);ctx.scale(camera.zoom,camera.zoom);ctx.translate(-W/2+camera.x,-H/2+camera.y);
 
-  // Light rays from surface
-  ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 5; i++) {
-    const rx = 100 + i * 200 + Math.sin(t * 0.2 + i * 1.5) * 30;
-    const grad = ctx.createLinearGradient(rx, 50, rx + 20, 300);
-    grad.addColorStop(0, `rgba(180,230,255,${0.06 + Math.sin(t * 0.3 + i) * 0.02})`);
-    grad.addColorStop(1, 'rgba(180,230,255,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(rx - 15, 50);
-    ctx.lineTo(rx + 15, 50);
-    ctx.lineTo(rx + 30 + Math.sin(t * 0.4 + i) * 10, 350);
-    ctx.lineTo(rx - 10 + Math.sin(t * 0.35 + i) * 10, 350);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.restore();
-}
+  drawBackground(ctx);drawWaterSurface(ctx,time);drawCaustics(ctx,time);drawSand(ctx,time);
 
-// ============================================================
-//  BACKGROUND
-// ============================================================
-function drawBackground(ctx) {
-  // Gradient: light blue top → deeper blue bottom
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#b8e4f0');
-  bg.addColorStop(0.15, '#8dcfe8');
-  bg.addColorStop(0.5, '#5bacc8');
-  bg.addColorStop(0.85, '#3a8aaa');
-  bg.addColorStop(1, '#2d7090');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  for(let i=0;i<plants.length;i+=2)plants[i].draw(ctx,time);
+  drawParticles(ctx);
+  for(const f of foods)f.draw(ctx);
+  for(const s of shells)s.draw(ctx);
 
-  // Depth blur effect (subtle darker bands)
-  ctx.globalAlpha = 0.08;
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = '#1a3a50';
-    ctx.fillRect(0, H * 0.6 + i * 30, W, 20);
-  }
-  ctx.globalAlpha = 1;
-}
+  clearShrimp.draw(ctx);beeShrimp.draw(ctx);
 
-// ============================================================
-//  SAND
-// ============================================================
-function drawSand(ctx) {
-  // White sand base
-  const sandGrad = ctx.createLinearGradient(0, 540, 0, H);
-  sandGrad.addColorStop(0, '#f0e8d8');
-  sandGrad.addColorStop(0.3, '#e8ddd0');
-  sandGrad.addColorStop(1, '#ddd0c0');
-  ctx.fillStyle = sandGrad;
-  ctx.beginPath();
-  ctx.moveTo(0, 548);
-  // Gentle undulation
-  for (let x = 0; x <= W; x += 2) {
-    const y = 548 + Math.sin(x * 0.015) * 4 + Math.sin(x * 0.04) * 2;
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(W, H);
-  ctx.lineTo(0, H);
-  ctx.closePath();
-  ctx.fill();
-
-  // Sand grain texture
-  ctx.fillStyle = 'rgba(180,160,130,0.08)';
-  for (let i = 0; i < 60; i++) {
-    const gx = (i * 17 + 5) % W;
-    const gy = 555 + (i * 7) % 30;
-    ctx.beginPath();
-    ctx.arc(gx, gy, rand(0.8, 2), 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Small pebbles
-  const pebbleColors = ['rgba(160,150,130,0.25)', 'rgba(140,130,115,0.2)', 'rgba(175,165,145,0.2)'];
-  const pebbles = [
-    {x:120,y:558,rx:6,ry:3},{x:340,y:562,rx:4,ry:2.5},{x:580,y:555,rx:5,ry:3},
-    {x:780,y:560,rx:7,ry:3},{x:900,y:557,rx:4,ry:2.5}
-  ];
-  for (const p of pebbles) {
-    ctx.fillStyle = pebbleColors[Math.floor(Math.random()*3)];
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y, p.rx, p.ry, 0.1, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-// ============================================================
-//  GLASS EDGES (tank frame)
-// ============================================================
-function drawGlass(ctx) {
-  // Subtle glass reflections on edges
-  ctx.save();
-  // Left edge
-  const lg = ctx.createLinearGradient(0, 0, 30, 0);
-  lg.addColorStop(0, 'rgba(200,235,255,0.15)');
-  lg.addColorStop(1, 'rgba(200,235,255,0)');
-  ctx.fillStyle = lg;
-  ctx.fillRect(0, 0, 30, H);
-  // Right edge
-  const rg = ctx.createLinearGradient(W, 0, W - 30, 0);
-  rg.addColorStop(0, 'rgba(200,235,255,0.15)');
-  rg.addColorStop(1, 'rgba(200,235,255,0)');
-  ctx.fillStyle = rg;
-  ctx.fillRect(W - 30, 0, 30, H);
-  // Top
-  const tg = ctx.createLinearGradient(0, 0, 0, 20);
-  tg.addColorStop(0, 'rgba(200,235,255,0.2)');
-  tg.addColorStop(1, 'rgba(200,235,255,0)');
-  ctx.fillStyle = tg;
-  ctx.fillRect(0, 0, W, 20);
-  ctx.restore();
-}
-
-// ============================================================
-//  MAIN RENDER LOOP
-// ============================================================
-function render(now) {
-  const dt = Math.min((now - lastTime) / 1000, 0.05);
-  lastTime = now;
-  time += dt;
-
-  // ── Update ──
-  // Water quality slowly decreases
-  waterQuality = Math.max(0, waterQuality - dt * 0.03);
-  document.getElementById('waterBar').style.width = waterQuality + '%';
-
-  // Update shrimps
-  beeShrimp.update(dt);
-  clearShrimp.update(dt);
-
-  // Update food
-  for (const f of foods) f.update(dt);
-  // Remove eaten food
-  for (let i = foods.length - 1; i >= 0; i--) {
-    if (foods[i].alpha <= 0) foods.splice(i, 1);
-  }
-
-  // Update shells
-  for (const s of shells) s.update(dt);
-  for (let i = shells.length - 1; i >= 0; i--) {
-    if (shells[i].alpha <= 0) shells.splice(i, 1);
-  }
-
-  // Update bubbles
-  for (const b of bubbles) {
-    b.y -= b.speed * dt;
-    b.x += Math.sin(time * 1.5 + b.wobble) * 6 * dt;
-  }
-  for (let i = bubbles.length - 1; i >= 0; i--) {
-    if (bubbles[i].y < -10) bubbles.splice(i, 1);
-  }
-
-  // Camera smooth follow
-  camera.zoom = lerp(camera.zoom, camera.targetZoom, dt * 2);
-  camera.x = lerp(camera.x, camera.targetX, dt * 2);
-  camera.y = lerp(camera.y, camera.targetY, dt * 2);
-
-  // ── Draw ──
-  ctx.save();
-
-  // Apply camera
-  ctx.translate(W / 2, H / 2);
-  ctx.scale(camera.zoom, camera.zoom);
-  ctx.translate(-W / 2 + camera.x, -H / 2 + camera.y);
-
-  // Background
-  drawBackground(ctx);
-
-  // Water surface
-  drawWaterSurface(ctx, time);
-
-  // Caustics
-  drawCaustics(ctx, time);
-
-  // Sand
-  drawSand(ctx);
-
-  // Plants (behind shrimps)
-  for (const p of plants) p.draw(ctx, time);
-
-  // Food
-  for (const f of foods) f.draw(ctx);
-
-  // Shells
-  for (const s of shells) s.draw(ctx);
-
-  // Shrimps (clear behind, bee in front for visibility)
-  clearShrimp.draw(ctx);
-  beeShrimp.draw(ctx);
-
-  // Bubbles
-  for (const b of bubbles) {
-    ctx.globalAlpha = b.alpha;
-    ctx.strokeStyle = 'rgba(200,240,255,0.6)';
-    ctx.lineWidth = 0.8;
-    ctx.fillStyle = 'rgba(200,240,255,0.08)';
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    // Highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.beginPath();
-    ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // Glass
-  drawGlass(ctx);
+  for(let i=1;i<plants.length;i+=2)plants[i].draw(ctx,time);
+  drawBubbles(ctx,time);drawGlass(ctx);
 
   ctx.restore();
-
   requestAnimationFrame(render);
 }
 
 // ============================================================
-//  INPUT HANDLERS
+//  INPUT
 // ============================================================
-// Feed button
-document.getElementById('feedBtn').addEventListener('click', () => {
-  for (let i = 0; i < randInt(3, 6); i++) {
-    foods.push(new Food(rand(200, W - 200)));
-  }
+document.getElementById('feedBtn').addEventListener('click',()=>{
+  for(let i=0;i<randInt(3,5);i++)foods.push(new Food(rand(180,W-180)));
   notify('🍤 餌を落としました');
-  // ビーが先に気付く
-  setTimeout(() => {
-    beeShrimp.state = STATES.EAT;
-    beeShrimp.stateTimer = 0;
-    beeShrimp.stateDuration = rand(6, 12);
-    document.getElementById('beeStatus').textContent = STATE_NAMES_BEE[STATES.EAT];
-  }, 800);
-  // 透明エビは遅れて反応
-  setTimeout(() => {
-    clearShrimp.state = STATES.EAT;
-    clearShrimp.stateTimer = 0;
-    clearShrimp.stateDuration = rand(6, 12);
-    document.getElementById('clearStatus').textContent = STATE_NAMES_CLEAR[STATES.EAT];
-  }, 2500);
+  setTimeout(()=>{beeShrimp.state=ST.EAT;beeShrimp.stateTimer=0;beeShrimp.stateDuration=rand(6,12);document.getElementById('beeStatus').textContent=SN_BEE[ST.EAT];},600);
+  setTimeout(()=>{clearShrimp.state=ST.EAT;clearShrimp.stateTimer=0;clearShrimp.stateDuration=rand(6,12);document.getElementById('clearStatus').textContent=SN_CLR[ST.EAT];},2200);
 });
-
-// Water change
-document.getElementById('cleanBtn').addEventListener('click', () => {
-  waterQuality = Math.min(100, waterQuality + 30);
+document.getElementById('cleanBtn').addEventListener('click',()=>{
+  waterQuality=Math.min(100,waterQuality+30);
   notify('💧 水を換えました。水質が改善しました');
+  for(let i=0;i<8;i++)setTimeout(()=>spawnBubble(rand(100,W-100),rand(400,550)),i*150);
 });
+document.getElementById('zoomInBtn').addEventListener('click',()=>{camera.targetZoom=Math.min(2.8,camera.targetZoom+0.3);});
+document.getElementById('zoomOutBtn').addEventListener('click',()=>{camera.targetZoom=Math.max(0.6,camera.targetZoom-0.3);});
 
-// Zoom
-document.getElementById('zoomInBtn').addEventListener('click', () => {
-  camera.targetZoom = Math.min(2.5, camera.targetZoom + 0.3);
-});
-document.getElementById('zoomOutBtn').addEventListener('click', () => {
-  camera.targetZoom = Math.max(0.7, camera.targetZoom - 0.3);
-});
+canvas.addEventListener('wheel',(e)=>{e.preventDefault();const d=e.deltaY>0?-0.08:0.08;camera.targetZoom=clamp(camera.targetZoom+d,0.6,2.8);},{passive:false});
 
-// Mouse wheel zoom
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const d = e.deltaY > 0 ? -0.1 : 0.1;
-  camera.targetZoom = clamp(camera.targetZoom + d, 0.7, 2.5);
-}, { passive: false });
-
-// Drag to pan
-let dragging = false, dragStartX = 0, dragStartY = 0;
-canvas.addEventListener('mousedown', (e) => {
-  dragging = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
+let dragging=false,dragSX=0,dragSY=0;
+canvas.addEventListener('mousedown',(e)=>{dragging=true;dragSX=e.clientX;dragSY=e.clientY;});
+window.addEventListener('mousemove',(e)=>{
+  if(!dragging)return;
+  const dx=(e.clientX-dragSX)/camera.zoom,dy=(e.clientY-dragSY)/camera.zoom;
+  camera.targetX=clamp(camera.targetX+dx,-250,250);camera.targetY=clamp(camera.targetY+dy,-120,120);
+  dragSX=e.clientX;dragSY=e.clientY;
 });
-window.addEventListener('mousemove', (e) => {
-  if (!dragging) return;
-  const dx = (e.clientX - dragStartX) / camera.zoom;
-  const dy = (e.clientY - dragStartY) / camera.zoom;
-  camera.targetX += dx;
-  camera.targetY += dy;
-  camera.targetX = clamp(camera.targetX, -200, 200);
-  camera.targetY = clamp(camera.targetY, -100, 100);
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-});
-window.addEventListener('mouseup', () => { dragging = false; });
+window.addEventListener('mouseup',()=>{dragging=false;});
 
 // ============================================================
 //  START
 // ============================================================
-notify('🌊 癒し水槽へようこそ。静かな時間をお過ごしください。', 4000);
+notify('🌊 癒し水槽へようこそ。静かな時間をお過ごしください。',4000);
 requestAnimationFrame(render);
 </script>
 </body>
