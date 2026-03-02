@@ -99,7 +99,7 @@
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v1.9.0</div>
+        <div class="sub-info" id="verInfo">v2.0.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo">
@@ -502,8 +502,8 @@ function drawSand(ctx,t){
 //  WATER PLANTS
 // ============================================================
 class WaterPlant{
-  constructor(x,y,type,n){
-    this.x=x;this.y=y;this.type=type;this.blades=[];
+  constructor(x,y,type,n,depth){
+    this.x=x;this.y=y;this.type=type;this.depth=depth||0;this.blades=[];
     for(let i=0;i<n;i++){
       this.blades.push({
         ang:rand(-0.35,0.35),len:type==='moss'?rand(14,42):rand(35,75),
@@ -516,9 +516,10 @@ class WaterPlant{
     }
   }
   draw(ctx,t){
+    const _dsc=lerp(1,0.65,this.depth),_dA=lerp(1,0.45,this.depth);
     for(const b of this.blades){
       const sw=Math.sin(t*b.sp+b.ph)*0.06+Math.sin(t*b.sp*1.7+b.ph+1)*0.03;
-      ctx.save();ctx.translate(this.x+b.ox,this.y);ctx.rotate(b.ang+sw);
+      ctx.save();ctx.translate(this.x+b.ox,this.y);ctx.scale(_dsc,_dsc);ctx.globalAlpha=_dA;ctx.rotate(b.ang+sw);
       if(this.type==='moss'){
         const g=ctx.createLinearGradient(0,0,0,-b.len);
         g.addColorStop(0,hsl(b.hue,b.sat,b.lit+5,0.88));
@@ -554,12 +555,12 @@ class WaterPlant{
 
 const plants=[];
 const plantDefs=[
-  {xr:0.06,t:'moss',n:18},{xr:0.19,t:'stem',n:5},
-  {xr:0.30,t:'moss',n:14},{xr:0.44,t:'moss',n:16},
-  {xr:0.54,t:'stem',n:6},{xr:0.65,t:'moss',n:18},
-  {xr:0.78,t:'stem',n:4},{xr:0.88,t:'moss',n:12},
-  {xr:0.96,t:'moss',n:8},{xr:0.13,t:'moss',n:6},
-  {xr:0.73,t:'moss',n:5},{xr:0.38,t:'moss',n:5},
+  {xr:0.06,t:'moss',n:18,d:0.15},{xr:0.19,t:'stem',n:5,d:0.7},
+  {xr:0.30,t:'moss',n:14,d:0.35},{xr:0.44,t:'moss',n:16,d:0.8},
+  {xr:0.54,t:'stem',n:6,d:0.1},{xr:0.65,t:'moss',n:18,d:0.5},
+  {xr:0.78,t:'stem',n:4,d:0.85},{xr:0.88,t:'moss',n:12,d:0.25},
+  {xr:0.96,t:'moss',n:8,d:0.6},{xr:0.13,t:'moss',n:6,d:0.12},
+  {xr:0.73,t:'moss',n:5,d:0.45},{xr:0.38,t:'moss',n:5,d:0.72},
 ];
 
 // ============================================================
@@ -582,13 +583,14 @@ function initTerrain(){
   }
   plants.length=0;
   for(const p of plantDefs){
-    plants.push(new WaterPlant(p.xr*W,SAND_Y+rand(-2,5),p.t,p.n));
+    plants.push(new WaterPlant(p.xr*W,SAND_Y+rand(-2,5),p.t,p.n,p.d));
   }
+  plants.sort((a,b)=>b.depth-a.depth);
   parts.length=0;
   const partN=Math.round(40*(W/400));
   for(let i=0;i<partN;i++){
     parts.push({x:rand(0,W),y:rand(50,SAND_Y-20),vx:rand(-1.5,1.5),vy:rand(-0.8,0.8),
-      r:rand(0.3,1.3),alpha:rand(0.03,0.12),ph:rand(0,Math.PI*2)});
+      r:rand(0.3,1.3),alpha:rand(0.03,0.12),ph:rand(0,Math.PI*2),depth:rand(0,1)});
   }
   if(shrimpsReady){for(const s of shrimps){s.x=clamp(s.x,20,W-20);s.y=clamp(s.y,60,SAND_Y+2);}}
 }
@@ -604,7 +606,7 @@ function updateParts(dt){
   }
 }
 function drawParts(ctx){
-  for(const p of parts){ctx.globalAlpha=p.alpha;ctx.fillStyle='rgba(210,235,248,1)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}
+  for(const p of parts){const ds=lerp(1,0.4,p.depth);ctx.globalAlpha=p.alpha*lerp(1,0.35,p.depth);ctx.fillStyle='rgba(210,235,248,1)';ctx.beginPath();ctx.arc(p.x,p.y,p.r*ds,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;
 }
 
@@ -681,6 +683,7 @@ const SNC=['ツマツマ中','歩き中','水草の影','スイム','お食事�
 class Shrimp{
   constructor(x,y){
     this.x=x;this.y=y;this.tx=x;this.ty=y;
+    this.depth=0;this.baseDepth=0;this.uiId=null;
     this.state=ST.TSUMA;this.st=0;this.sd=rand(3,8);
     this.facing=1;this.lp=0;this.bw=0;
     this.tr=0;this.mt=rand(60,120);
@@ -705,6 +708,7 @@ class Shrimp{
     this.lp+=dt*(this.state===ST.WALK?8:this.state===ST.SWIM?14:5);
     this.bw+=dt*2;this.ap+=dt*2.5;
     this.tp+=dt*14;this.bp+=dt*1.5;
+    this.depth=clamp(this.baseDepth+Math.sin(time*0.12+this.bp)*0.06,0,1);
     this.mt-=dt;
     if(this.sb>0)this.sb-=dt*3;
     if(this.mt<=0){this.molt();this.mt=rand(90,180);}
@@ -799,8 +803,9 @@ class BeeShrimp extends Shrimp{
     this.st=0;if(this.uiId)document.getElementById(this.uiId).textContent=SNB[this.state];
   }
   draw(ctx){
-    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing,1);
-    if(this.tr>0)ctx.globalAlpha=1-this.tr*0.3;
+    const dsc=lerp(1,0.62,this.depth);
+    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*dsc,dsc);
+    ctx.globalAlpha=lerp(1,0.5,this.depth)*(1-this.tr*0.3);
     const w=this.bw,br=Math.sin(this.bp)*0.3,tO=this.jm?Math.sin(this.tp)*0.6:0;
     const ay=(t)=>Math.sin(w+t*2.5)*0.5*(1-t)+br*t;
     const a0=ay(0),a1=ay(.12),a2=ay(.25),a3=ay(.38),a4=ay(.5),a5=ay(.62),a6=ay(.75),a7=ay(.88),a8=ay(1);
@@ -894,8 +899,8 @@ class ClearShrimp extends Shrimp{
       if(d>20){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*.7*dt;this.y+=(dy/d)*this.speed*.25*dt;}}
   }
   draw(ctx){
-    const sc=0.82;ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*sc,sc);
-    const alpha=this.bA-this.tr*0.15;ctx.globalAlpha=alpha;
+    const sc=0.82,dsc=lerp(1,0.62,this.depth);ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*sc*dsc,sc*dsc);
+    const alpha=(this.bA-this.tr*0.15)*lerp(1,0.5,this.depth);ctx.globalAlpha=alpha;
     const w=this.bw,br=Math.sin(this.bp)*.3,tO=this.jm?Math.sin(this.tp)*.5:0;
     const ay=(t)=>Math.sin(w+t*2.5)*.4*(1-t)+br*t;
     const a0=ay(0),a1=ay(.12),a2=ay(.25),a3=ay(.38),a4=ay(.5),a5=ay(.62),a6=ay(.75),a7=ay(.88),a8=ay(1);
@@ -953,8 +958,9 @@ class ClearShrimp extends Shrimp{
 //  CREATE
 // ============================================================
 const shrimps=[];
-for(let i=0;i<3;i++){const s=new BeeShrimp();s.uiId='s'+i;s.x=rand(W*0.15+i*W*0.2,W*0.25+i*W*0.2);shrimps.push(s);}
-for(let i=0;i<2;i++){const s=new ClearShrimp();s.uiId='s'+(3+i);s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
+const _depths=[0.08,0.48,0.88,0.28,0.68];
+for(let i=0;i<3;i++){const s=new BeeShrimp();s.uiId='s'+i;s.baseDepth=_depths[i];s.depth=_depths[i];s.x=rand(W*0.15+i*W*0.2,W*0.25+i*W*0.2);shrimps.push(s);}
+for(let i=0;i<2;i++){const s=new ClearShrimp();s.uiId='s'+(3+i);s.baseDepth=_depths[3+i];s.depth=_depths[3+i];s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
 for(const s of shrimps)s.pickNewState();
 shrimpsReady=true;
 
@@ -963,18 +969,46 @@ shrimpsReady=true;
 // ============================================================
 function drawGlass(ctx){
   ctx.save();
-  const gl=ctx.createLinearGradient(0,0,28,0);gl.addColorStop(0,'rgba(0,8,18,0.18)');gl.addColorStop(1,'rgba(0,8,18,0)');
-  ctx.fillStyle=gl;ctx.fillRect(0,0,28,H);
-  const gr=ctx.createLinearGradient(W,0,W-28,0);gr.addColorStop(0,'rgba(0,8,18,0.18)');gr.addColorStop(1,'rgba(0,8,18,0)');
-  ctx.fillStyle=gr;ctx.fillRect(W-28,0,28,H);
-  const gt=ctx.createLinearGradient(0,0,0,18);gt.addColorStop(0,'rgba(0,8,18,0.12)');gt.addColorStop(1,'rgba(0,8,18,0)');
-  ctx.fillStyle=gt;ctx.fillRect(0,0,W,18);
-  const gb=ctx.createLinearGradient(0,H,0,H-22);gb.addColorStop(0,'rgba(0,8,18,0.18)');gb.addColorStop(1,'rgba(0,8,18,0)');
-  ctx.fillStyle=gb;ctx.fillRect(0,H-22,W,22);
-  // Glass reflections
-  ctx.globalAlpha=0.03;ctx.fillStyle='rgba(195,235,255,1)';ctx.fillRect(12,22,1.5,H-44);
-  ctx.globalAlpha=0.02;ctx.fillRect(17,35,0.8,H-70);
-  ctx.globalAlpha=0.025;ctx.fillRect(W-14,30,1.2,H-60);
+  // Tank frame edge shadows
+  const gl=ctx.createLinearGradient(0,0,32,0);gl.addColorStop(0,'rgba(0,8,18,0.28)');gl.addColorStop(1,'rgba(0,8,18,0)');
+  ctx.fillStyle=gl;ctx.fillRect(0,0,32,H);
+  const gr=ctx.createLinearGradient(W,0,W-32,0);gr.addColorStop(0,'rgba(0,8,18,0.28)');gr.addColorStop(1,'rgba(0,8,18,0)');
+  ctx.fillStyle=gr;ctx.fillRect(W-32,0,32,H);
+  const gt=ctx.createLinearGradient(0,0,0,20);gt.addColorStop(0,'rgba(0,8,18,0.2)');gt.addColorStop(1,'rgba(0,8,18,0)');
+  ctx.fillStyle=gt;ctx.fillRect(0,0,W,20);
+  const gb=ctx.createLinearGradient(0,H,0,H-24);gb.addColorStop(0,'rgba(0,8,18,0.28)');gb.addColorStop(1,'rgba(0,8,18,0)');
+  ctx.fillStyle=gb;ctx.fillRect(0,H-24,W,24);
+  // Glass reflection lines
+  ctx.globalAlpha=0.04;ctx.fillStyle='rgba(195,235,255,1)';ctx.fillRect(12,22,1.5,H-44);
+  ctx.globalAlpha=0.025;ctx.fillRect(17,35,0.8,H-70);
+  ctx.globalAlpha=0.035;ctx.fillRect(W-14,30,1.2,H-60);
+  // Diagonal window reflection streak
+  ctx.save();ctx.globalAlpha=0.022;ctx.translate(W*0.28,0);ctx.rotate(0.16);
+  const sk=ctx.createLinearGradient(-25,0,25,0);
+  sk.addColorStop(0,'rgba(255,255,255,0)');sk.addColorStop(0.35,'rgba(255,255,255,0.5)');
+  sk.addColorStop(0.5,'rgba(255,255,255,1)');sk.addColorStop(0.65,'rgba(255,255,255,0.5)');
+  sk.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=sk;ctx.fillRect(-25,-10,50,H+20);ctx.restore();
+  ctx.save();ctx.globalAlpha=0.012;ctx.translate(W*0.62,0);ctx.rotate(0.13);
+  const sk2=ctx.createLinearGradient(-40,0,40,0);
+  sk2.addColorStop(0,'rgba(255,255,255,0)');sk2.addColorStop(0.4,'rgba(255,255,255,0.3)');
+  sk2.addColorStop(0.5,'rgba(255,255,255,0.5)');sk2.addColorStop(0.6,'rgba(255,255,255,0.3)');
+  sk2.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=sk2;ctx.fillRect(-40,-10,80,H+20);ctx.restore();
+  // Room ambient reflection
+  ctx.globalCompositeOperation='screen';
+  ctx.globalAlpha=0.018+Math.sin(time*0.08)*0.004;
+  const rx=W*0.55+Math.sin(time*0.04)*10,ry=H*0.22+Math.cos(time*0.06)*6;
+  const rgl=ctx.createRadialGradient(rx,ry,0,rx,ry,H*0.28);
+  rgl.addColorStop(0,'rgba(255,240,215,0.7)');rgl.addColorStop(0.5,'rgba(245,225,200,0.25)');
+  rgl.addColorStop(1,'rgba(245,225,200,0)');
+  ctx.fillStyle=rgl;ctx.fillRect(0,0,W,H);
+  // Corner vignette
+  ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+  const vR=Math.max(W,H)*0.72;
+  const vg=ctx.createRadialGradient(W/2,H/2,vR*0.55,W/2,H/2,vR);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,5,12,0.18)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   ctx.globalAlpha=1;ctx.restore();
 }
 
@@ -1000,14 +1034,14 @@ function render(now){
   drawSand(X,time);
   drawCaustics(X,time);
 
-  for(let i=0;i<plants.length;i+=2)plants[i].draw(X,time);
+  for(const p of plants){if(p.depth>=0.4)p.draw(X,time);}
   drawParts(X);
   for(const f of foods)f.draw(X);
   for(const s of shells)s.draw(X);
 
-  for(const s of shrimps)s.draw(X);
+  const _ds=[...shrimps].sort((a,b)=>b.depth-a.depth);for(const s of _ds)s.draw(X);
 
-  for(let i=1;i<plants.length;i+=2)plants[i].draw(X,time);
+  for(const p of plants){if(p.depth<0.4)p.draw(X,time);}
 
   drawHaze(X,time);
   drawBubs(X,time);
