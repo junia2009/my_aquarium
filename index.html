@@ -841,7 +841,11 @@ function initTerrain(){
   if(shrimpsReady){for(const s of shrimps){s.x=clamp(s.x,20,W-20);s.y=clamp(s.y,60,SAND_Y+2);}}
 }
 resizeCanvas();
-window.addEventListener('resize',resizeCanvas);
+let _resizeTimer=0;
+window.addEventListener('resize',()=>{
+  clearTimeout(_resizeTimer);
+  _resizeTimer=setTimeout(resizeCanvas,150);
+});
 
 function updateParts(dt){
   for(const p of parts){
