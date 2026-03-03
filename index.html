@@ -123,7 +123,7 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.0.0</div>
+        <div class="sub-info" id="verInfo">v4.1.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -136,6 +136,7 @@
       <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
       <button class="btn" id="heaterBtn"><span class="ic">🌡️</span><span id="heaterLbl">ヒーター</span></button>
       <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
+      <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
       <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
 
     </div>
@@ -194,9 +195,13 @@ setInterval(()=>{ambientTemp=getSeasonTemp();},60000);
 // ─── Filter ───
 let filterOn=false;
 
+// ─── Lighting ───
+let lightMode='auto'; // 'auto','on','off'
+let lightOn=true; // current effective state
+let lightBrightness=1; // 0(dark)..1(bright), smoothly animated
+
 // ─── Algae ───
 let algaeLevel=0; // 0-100
-let lightTimer=0;
 
 // ─── Disease ───
 // tracked per-shrimp: s.sick
@@ -1423,9 +1428,12 @@ function render(now){
   // ── Lighting & Algae ──
   const jstH=new Date(Date.now()+(new Date().getTimezoneOffset()+540)*60000).getHours();
   const isDaylight=jstH>=7&&jstH<19;
-  if(isDaylight){algaeLevel=Math.min(100,algaeLevel+0.002*dt);}
+  if(lightMode==='auto')lightOn=isDaylight;
+  else lightOn=(lightMode==='on');
+  const targetBright=lightOn?1:0.28;
+  lightBrightness+=(targetBright-lightBrightness)*dt*0.8; // smooth transition
+  if(lightOn){algaeLevel=Math.min(100,algaeLevel+0.002*dt);}
   else{algaeLevel=Math.max(0,algaeLevel-0.0005*dt);}
-  // Algae dims glass if too high (visual handled in drawGlass)
 
   // ── Water quality ──
   const aliveCount=shrimps.filter(s=>s.alive).length;
@@ -1544,6 +1552,29 @@ function render(now){
   drawGlass(X);
   drawPostProcess(X);
 
+  // ── Night dimming overlay ──
+  if(lightBrightness<0.99){
+    const dim=1-lightBrightness; // 0..0.72
+    X.save();
+    // Deep blue-black overlay
+    X.globalAlpha=dim*0.65;
+    X.fillStyle='rgba(4,8,22,1)';
+    X.fillRect(0,0,W,H);
+    // Moonlight shimmer (subtle)
+    if(dim>0.3){
+      X.globalAlpha=(dim-0.3)*0.06;
+      X.globalCompositeOperation='screen';
+      const mx=W*0.35+Math.sin(time*0.15)*20,my=H*0.12+Math.cos(time*0.12)*8;
+      const mg=X.createRadialGradient(mx,my,0,mx,my,H*0.45);
+      mg.addColorStop(0,'rgba(140,170,220,0.5)');
+      mg.addColorStop(0.4,'rgba(100,130,180,0.15)');
+      mg.addColorStop(1,'rgba(60,80,120,0)');
+      X.fillStyle=mg;X.fillRect(0,0,W,H);
+      X.globalCompositeOperation='source-over';
+    }
+    X.restore();
+  }
+
   X.restore();
   requestAnimationFrame(render);
 }
@@ -1597,6 +1628,12 @@ document.getElementById('filterBtn').addEventListener('click',()=>{
   document.getElementById('filterLbl').textContent=filterOn?'ろ過ON':'ろ過OFF';
   document.querySelector('#filterBtn .ic').textContent=filterOn?'🔄':'⚙️';
   notify(filterOn?'🔄 ろ過装置ON（水質維持）':'⚙️ ろ過装置OFF');
+});
+// Light button (auto → on → off → auto)
+document.getElementById('lightBtn').addEventListener('click',()=>{
+  if(lightMode==='auto'){lightMode='on';document.getElementById('lightLbl').textContent='照明ON';document.querySelector('#lightBtn .ic').textContent='☀️';notify('☀️ 照明ON（常時点灯）');}
+  else if(lightMode==='on'){lightMode='off';document.getElementById('lightLbl').textContent='照明OFF';document.querySelector('#lightBtn .ic').textContent='🌙';notify('🌙 照明OFF（消灯）');}
+  else{lightMode='auto';document.getElementById('lightLbl').textContent='照明AUTO';document.querySelector('#lightBtn .ic').textContent='💡';notify('💡 照明AUTO（7時〜19時）');}
 });
 
 
