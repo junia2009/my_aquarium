@@ -56,6 +56,10 @@
   #shrimpInfo{text-align:right}
   .wbar{width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:3px;overflow:hidden}
   .wbar-fill{width:100%;height:100%;background:linear-gradient(90deg,#2e9cc8,#6ec4e8);border-radius:2px;transition:width .8s ease}
+  .stat-row{display:flex;align-items:center;gap:3px;margin-top:1px}
+  .stat-lb{font-size:7px;color:rgba(130,180,225,0.4);width:12px;text-align:right}
+  .minibar{width:34px;height:3px;background:rgba(255,255,255,0.06);border-radius:1.5px;overflow:hidden}
+  .minibar-fill{height:100%;border-radius:1.5px;transition:width .6s ease}
   #bottomBar{
     padding:0 10px calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
     padding-bottom:calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
@@ -106,16 +110,10 @@
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v2.2.0</div>
+        <div class="sub-info" id="verInfo">v3.0.0</div>
       </div>
       <div>
-        <div class="panel" id="shrimpInfo">
-          <div><span class="lb">ビー①：</span><span class="v" id="s0">ツマツマ中</span></div>
-          <div><span class="lb">ビー②：</span><span class="v" id="s1">ツマツマ中</span></div>
-          <div><span class="lb">ビー③：</span><span class="v" id="s2">ツマツマ中</span></div>
-          <div><span class="lb">透明①：</span><span class="v" id="s3">水草の影</span></div>
-          <div><span class="lb">透明②：</span><span class="v" id="s4">水草の影</span></div>
-        </div>
+        <div class="panel" id="shrimpInfo"></div>
         <div class="sub-info" style="text-align:right" id="jstClock"></div>
       </div>
     </div>
@@ -879,6 +877,9 @@ class Shrimp{
     this.speed=18;this.ap=rand(0,Math.PI*2);
     this.tp=0;this.jm=false;
     this.sb=0;this.bp=rand(0,Math.PI*2);
+    this.hunger=100;this.hp=100;
+    this.alive=true;this.dying=false;this.dyingTimer=0;
+    this.babyScale=1;
   }
   pickWT(){
     this.tx=clamp(this.x+rand(-80,80),30,W-30);
@@ -893,6 +894,13 @@ class Shrimp{
     this.ty=clamp(this.y+rand(-40,40),H*0.1,H*0.51);
   }
   update(dt){
+    if(this.dying){this.dyingTimer-=dt;this.y-=2*dt;this.x+=Math.sin(time*0.8)*0.3;return;}
+    if(!this.alive)return;
+    this.hunger=Math.max(0,this.hunger-0.015*dt);
+    if(this.hunger<20)this.hp=Math.max(0,this.hp-0.008*dt);
+    if(wq<20)this.hp=Math.max(0,this.hp-0.008*dt);
+    if(this.hunger>50&&wq>50&&this.hp<100)this.hp=Math.min(100,this.hp+0.003*dt);
+    if(this.babyScale<1)this.babyScale=Math.min(1,this.babyScale+dt*0.0008);
     this.st+=dt;
     this.lp+=dt*(this.state===ST.WALK?8:this.state===ST.SWIM?14:5);
     this.bw+=dt*2;this.ap+=dt*2.5;
@@ -937,7 +945,7 @@ class Shrimp{
         for(const f of foods){if(f.eaten||!f.settled)continue;const fd=Math.abs(f.x-this.x)+Math.abs(f.y-this.y);if(fd<md){md=fd;near=f;}}
         if(near){const dx=near.x-this.x,dy=near.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
           if(d>7){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*dt;}
-          else near.eaten=true;
+          else{near.eaten=true;this.hunger=Math.min(100,this.hunger+15);}
         }else{this.state=ST.TSUMA;this.st=0;this.sd=rand(3,6);}
         break;}
       case ST.FOLLOW:this.jm=false;break;
@@ -992,9 +1000,10 @@ class BeeShrimp extends Shrimp{
     this.st=0;if(this.uiId)document.getElementById(this.uiId).textContent=SNB[this.state];
   }
   draw(ctx){
-    const dsc=lerp(1,0.62,this.depth);
+    const dsc=lerp(1,0.62,this.depth)*this.babyScale;
     ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*dsc,dsc);
     ctx.globalAlpha=lerp(1,0.5,this.depth)*(1-this.tr*0.3);
+    if(this.dying){ctx.globalAlpha*=Math.max(0,this.dyingTimer/3);ctx.rotate((1-this.dyingTimer/3)*Math.PI*0.5);}
     const w=this.bw,br=Math.sin(this.bp)*0.3,tO=this.jm?Math.sin(this.tp)*0.6:0;
     const ay=(t)=>Math.sin(w+t*2.5)*0.5*(1-t)+br*t;
     const a0=ay(0),a1=ay(.12),a2=ay(.25),a3=ay(.38),a4=ay(.5),a5=ay(.62),a6=ay(.75),a7=ay(.88),a8=ay(1);
@@ -1084,12 +1093,16 @@ class ClearShrimp extends Shrimp{
     this.st=0;if(this.uiId)document.getElementById(this.uiId).textContent=SNC[this.state];
   }
   update(dt){super.update(dt);
-    if(this.state===ST.FOLLOW&&shrimps.length>0){const leader=shrimps[0];const dx=leader.x-30*this.facing-this.x,dy=leader.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(this.dying||!this.alive)return;
+    if(this.state===ST.FOLLOW){const leader=shrimps.find(s=>s.alive&&s!==this);
+      if(!leader){this.state=ST.TSUMA;this.st=0;this.sd=rand(3,6);return;}
+      const dx=leader.x-30*this.facing-this.x,dy=leader.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
       if(d>20){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*.7*dt;this.y+=(dy/d)*this.speed*.25*dt;}}
   }
   draw(ctx){
-    const sc=0.82,dsc=lerp(1,0.62,this.depth);ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*sc*dsc,sc*dsc);
+    const sc=0.82,dsc=lerp(1,0.62,this.depth)*this.babyScale;ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*sc*dsc,sc*dsc);
     const alpha=(this.bA-this.tr*0.15)*lerp(1,0.5,this.depth);ctx.globalAlpha=alpha;
+    if(this.dying){ctx.globalAlpha=alpha*Math.max(0,this.dyingTimer/3);ctx.rotate((1-this.dyingTimer/3)*Math.PI*0.5);}
     const w=this.bw,br=Math.sin(this.bp)*.3,tO=this.jm?Math.sin(this.tp)*.5:0;
     const ay=(t)=>Math.sin(w+t*2.5)*.4*(1-t)+br*t;
     const a0=ay(0),a1=ay(.12),a2=ay(.25),a3=ay(.38),a4=ay(.5),a5=ay(.62),a6=ay(.75),a7=ay(.88),a8=ay(1);
@@ -1148,10 +1161,42 @@ class ClearShrimp extends Shrimp{
 // ============================================================
 const shrimps=[];
 const _depths=[0.08,0.48,0.88,0.28,0.68];
-for(let i=0;i<3;i++){const s=new BeeShrimp();s.uiId='s'+i;s.baseDepth=_depths[i];s.depth=_depths[i];s.x=rand(W*0.15+i*W*0.2,W*0.25+i*W*0.2);shrimps.push(s);}
-for(let i=0;i<2;i++){const s=new ClearShrimp();s.uiId='s'+(3+i);s.baseDepth=_depths[3+i];s.depth=_depths[3+i];s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
+for(let i=0;i<3;i++){const s=new BeeShrimp();s.baseDepth=_depths[i];s.depth=_depths[i];s.x=rand(W*0.15+i*W*0.2,W*0.25+i*W*0.2);shrimps.push(s);}
+for(let i=0;i<2;i++){const s=new ClearShrimp();s.baseDepth=_depths[3+i];s.depth=_depths[3+i];s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
 for(const s of shrimps)s.pickNewState();
 shrimpsReady=true;
+let breedTimer=120,uiTimer=0,gameOver=false;
+const CIRC=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+function shrimpStatusText(s){
+  if(s.dying)return '⭐ …';
+  if(s.hp<20)return '😰 弱ってる';
+  if(s.hunger<15)return '😣 お腹すいた';
+  if(s.hunger<30)return '🤔 少し空腹';
+  return ((s instanceof BeeShrimp)?SNB:SNC)[s.state];
+}
+function updateShrimpUI(){
+  const panel=document.getElementById('shrimpInfo');
+  let bN=0,cN=0,html='';
+  const vis=shrimps.filter(s=>s.alive||s.dying);
+  html+='<div style="margin-bottom:2px"><span class="lb">匹数：</span><span class="v">'+vis.length+'匹</span></div>';
+  for(const s of shrimps){
+    if(!s.alive&&!s.dying)continue;
+    let nm;
+    if(s instanceof BeeShrimp){nm='ビー'+CIRC[bN];bN++;}
+    else{nm='透明'+CIRC[cN];cN++;}
+    const st=shrimpStatusText(s);
+    const hpP=Math.max(0,Math.round(s.hp));
+    const hunP=Math.max(0,Math.round(s.hunger));
+    const hpC=hpP>50?'#6ec8a0':hpP>25?'#e8c44a':'#e85050';
+    const hunC=hunP>30?'#6eaee8':'#e88050';
+    html+='<div style="margin-bottom:2px"><span class="lb">'+nm+'：</span><span class="v">'+st+'</span>'
+      +'<div class="stat-row"><span class="stat-lb">HP</span><div class="minibar"><div class="minibar-fill" style="width:'+hpP+'%;background:'+hpC+'"></div></div>'
+      +'<span class="stat-lb">餌</span><div class="minibar"><div class="minibar-fill" style="width:'+hunP+'%;background:'+hunC+'"></div></div></div></div>';
+  }
+  if(vis.length===0)html+='<div><span class="v" style="color:#e85050">エビがいません</span></div>';
+  panel.innerHTML=html;
+}
+updateShrimpUI();
 
 // ============================================================
 //  GLASS
@@ -1237,9 +1282,41 @@ function drawPostProcess(ctx){
 function render(now){
   const dt=Math.min((now-lt)/1000,0.05);lt=now;time+=dt;
   wq=Math.max(0,wq-dt*0.025);
-  document.getElementById('wBar').style.width=wq+'%';
+  const wBarEl=document.getElementById('wBar');
+  wBarEl.style.width=wq+'%';
+  wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
 
   for(const s of shrimps)s.update(dt);
+
+  for(let i=shrimps.length-1;i>=0;i--){
+    const s=shrimps[i];
+    if(s.alive&&s.hp<=0){s.alive=false;s.dying=true;s.dyingTimer=3;
+      notify('😢 エビが天国へ旅立ちました…',4000);uiTimer=0;}
+    if(s.dying&&s.dyingTimer<=0){shrimps.splice(i,1);uiTimer=0;}
+  }
+  if(!gameOver&&shrimps.length===0){gameOver=true;notify('😢 全てのエビがいなくなりました…\nリロードでリスタート',120000);}
+
+  breedTimer-=dt;
+  if(breedTimer<=0){
+    breedTimer=rand(90,150);
+    const alive=shrimps.filter(s=>s.alive);
+    if(alive.length>=2&&alive.length<10){
+      const avgHp=alive.reduce((a,e)=>a+e.hp,0)/alive.length;
+      const avgHun=alive.reduce((a,e)=>a+e.hunger,0)/alive.length;
+      if(avgHp>80&&avgHun>60&&wq>70&&Math.random()<0.25){
+        const parent=alive[randI(0,alive.length-1)];
+        const baby=(parent instanceof BeeShrimp)?new BeeShrimp():new ClearShrimp();
+        baby.x=clamp(parent.x+rand(-20,20),30,W-30);baby.y=clamp(parent.y+rand(-5,5),60,SAND_Y);
+        baby.babyScale=0.4;baby.baseDepth=rand(0,1);baby.depth=baby.baseDepth;
+        shrimps.push(baby);baby.pickNewState();
+        notify('🎉 赤ちゃんエビが誕生しました！',4000);uiTimer=0;
+      }
+    }
+  }
+
+  uiTimer-=dt;
+  if(uiTimer<=0){uiTimer=0.5;updateShrimpUI();}
+
   updateParts(dt);
   for(const f of foods)f.update(dt);
   for(let i=foods.length-1;i>=0;i--)if(foods[i].alpha<=0)foods.splice(i,1);
@@ -1275,13 +1352,13 @@ function render(now){
 //  INPUT (touch + mouse)
 // ============================================================
 document.getElementById('feedBtn').addEventListener('click',()=>{
+  if(shrimps.filter(s=>s.alive).length===0)return;
   for(let i=0;i<randI(3,5);i++)foods.push(new Food(rand(60,W-60)));
   notify('🍤 餌を落としました');
   shrimps.forEach((s,i)=>{
-    setTimeout(()=>{s.state=ST.EAT;s.st=0;s.sd=rand(6,12);
-      const names=(s instanceof BeeShrimp)?SNB:SNC;
-      if(s.uiId)document.getElementById(s.uiId).textContent=names[ST.EAT];
-    },600+i*400);
+    if(!s.alive)return;
+    s.hunger=Math.min(100,s.hunger+5);
+    setTimeout(()=>{if(!s.alive)return;s.state=ST.EAT;s.st=0;s.sd=rand(6,12);},600+i*400);
   });
 });
 document.getElementById('cleanBtn').addEventListener('click',()=>{
@@ -1434,7 +1511,7 @@ document.getElementById('bgmBtn').addEventListener('click',()=>{
 });
 
 // ============================================================
-notify('🌊 癒し水槽へようこそ',3500);
+notify('🌊 癒し水槽へようこそ\n餌やりと水換えでエビを育てよう！',4000);
 requestAnimationFrame(render);
 </script>
 </body>
