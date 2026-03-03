@@ -110,7 +110,7 @@
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v3.0.2</div>
+        <div class="sub-info" id="verInfo">v3.1.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -883,7 +883,7 @@ class Shrimp{
     this.sb=0;this.bp=rand(0,Math.PI*2);
     this.hunger=100;this.hp=100;
     this.alive=true;this.dying=false;this.dyingTimer=0;
-    this.babyScale=1;
+    this.babyScale=1;this.excreteTimer=0;
   }
   pickWT(){
     this.tx=clamp(this.x+rand(-80,80),30,W-30);
@@ -903,8 +903,13 @@ class Shrimp{
     this.hunger=Math.max(0,this.hunger-0.015*dt);
     if(this.hunger<20)this.hp=Math.max(0,this.hp-0.008*dt);
     if(wq<20)this.hp=Math.max(0,this.hp-0.008*dt);
+    // Overcrowding stress: >8 shrimp = HP drain
+    const aliveN=shrimps.filter(s=>s.alive).length;
+    if(aliveN>8)this.hp=Math.max(0,this.hp-0.005*(aliveN-8)*dt);
     if(this.hunger>50&&wq>50&&this.hp<100)this.hp=Math.min(100,this.hp+0.003*dt);
     if(this.babyScale<1)this.babyScale=Math.min(1,this.babyScale+dt*0.0008);
+    // Excretion timer (food digested → tiny wq hit)
+    if(this.excreteTimer>0){this.excreteTimer-=dt;if(this.excreteTimer<=0){wq=Math.max(0,wq-0.3);}}
     this.st+=dt;
     this.lp+=dt*(this.state===ST.WALK?8:this.state===ST.SWIM?14:5);
     this.bw+=dt*2;this.ap+=dt*2.5;
@@ -949,7 +954,7 @@ class Shrimp{
         for(const f of foods){if(f.eaten||!f.settled)continue;const fd=Math.abs(f.x-this.x)+Math.abs(f.y-this.y);if(fd<md){md=fd;near=f;}}
         if(near){const dx=near.x-this.x,dy=near.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
           if(d>7){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*dt;}
-          else{near.eaten=true;this.hunger=Math.min(100,this.hunger+15);}
+          else{near.eaten=true;this.hunger=Math.min(100,this.hunger+15);this.excreteTimer=rand(15,30);}
         }else{this.state=ST.TSUMA;this.st=0;this.sd=rand(3,6);}
         break;}
       case ST.FOLLOW:this.jm=false;break;
@@ -1286,12 +1291,13 @@ function drawPostProcess(ctx){
 // ============================================================
 function render(now){
   const dt=Math.min((now-lt)/1000,0.05);lt=now;time+=dt;
-  // Water quality: base decay + bioload + rotting food + shells
+  // Water quality: base decay + bioload + rotting food + shells - plant purification
   const aliveCount=shrimps.filter(s=>s.alive).length;
   const bioLoad=0.025+aliveCount*0.003;
   const rottingFood=foods.filter(f=>f.rotting&&!f.eaten).length;
   const shellCount=shells.length;
-  wq=Math.max(0,wq-dt*(bioLoad+rottingFood*0.012+shellCount*0.006));
+  const plantPurify=plants.length*0.0008; // water plants purify water
+  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.012-shellCount*0.006+plantPurify),0,100);
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
   wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
@@ -1301,7 +1307,8 @@ function render(now){
   for(let i=shrimps.length-1;i>=0;i--){
     const s=shrimps[i];
     if(s.alive&&s.hp<=0){s.alive=false;s.dying=true;s.dyingTimer=3;
-      notify('😢 エビが天国へ旅立ちました…',4000);uiTimer=0;}
+      wq=Math.max(0,wq-8); // corpse pollutes water heavily
+      notify('😢 エビが天国へ旅立ちました…水質が悪化しています！',4000);uiTimer=0;}
     if(s.dying&&s.dyingTimer<=0){shrimps.splice(i,1);uiTimer=0;}
   }
   if(!gameOver&&shrimps.length===0){gameOver=true;notify('😢 全てのエビがいなくなりました…\nリロードでリスタート',120000);}
