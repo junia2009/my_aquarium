@@ -146,7 +146,7 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.1.1</div>
+        <div class="sub-info" id="verInfo">v4.2.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -163,6 +163,11 @@
         <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
         <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
         <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
+        <button class="btn" id="saveBtn"><span class="ic">💾</span>セーブ</button>
+        <button class="btn" id="loadBtn"><span class="ic">📂</span>ロード</button>
+        <button class="btn" id="exportBtn"><span class="ic">📤</span>エクスポート</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+        <button class="btn" id="importBtn"><span class="ic">📥</span>インポート</button>
       </div>
     </div>
   </div>
@@ -1815,6 +1820,171 @@ document.getElementById('bgmBtn').addEventListener('click',()=>{
 
 // ============================================================
 notify('🌊 癒し水槽へようこそ\n餌やりと水換えでエビを育てよう！',4000);
+
+// ============================================================
+//  SAVE / LOAD SYSTEM
+// ============================================================
+const SAVE_KEY='aquarium_save_v1';
+let autoSaveTimer=0;
+
+function buildSaveData(){
+  return {
+    version:'4.2.0',
+    savedAt:Date.now(),
+    wq:wq,
+    waterTemp:waterTemp,
+    heaterOn:heaterOn,
+    filterOn:filterOn,
+    lightMode:lightMode,
+    algaeLevel:algaeLevel,
+    breedTimer:breedTimer,
+    diseaseTimer:diseaseTimer,
+    gameOver:gameOver,
+    shrimps:shrimps.map(s=>({
+      type:s instanceof BeeShrimp?'bee':'clear',
+      x:s.x,y:s.y,
+      depth:s.depth,baseDepth:s.baseDepth,
+      hunger:s.hunger,hp:s.hp,
+      alive:s.alive,dying:s.dying,dyingTimer:s.dyingTimer,
+      babyScale:s.babyScale,
+      female:s.female,
+      eggs:s.eggs,eggTimer:s.eggTimer,
+      sick:s.sick,sickTimer:s.sickTimer,
+      mt:s.mt,tr:s.tr,
+      facing:s.facing,state:s.state
+    })),
+    shelters:shelters.map(sh=>({x:sh.x,y:sh.y,w:sh.w,h:sh.h}))
+  };
+}
+
+function applySaveData(data){
+  if(!data||!data.version)return false;
+  wq=data.wq!=null?data.wq:100;
+  waterTemp=data.waterTemp!=null?data.waterTemp:25;
+  heaterOn=!!data.heaterOn;
+  filterOn=!!data.filterOn;
+  lightMode=data.lightMode||'auto';
+  algaeLevel=data.algaeLevel||0;
+  breedTimer=data.breedTimer||120;
+  diseaseTimer=data.diseaseTimer||rand(180,360);
+  gameOver=!!data.gameOver;
+
+  // Restore UI toggles
+  document.getElementById('heaterLbl').textContent=heaterOn?'ヒーターON':'ヒーター';
+  document.querySelector('#heaterBtn .ic').textContent=heaterOn?'🔥':'🌡️';
+  document.getElementById('filterLbl').textContent=filterOn?'ろ過ON':'ろ過OFF';
+  document.querySelector('#filterBtn .ic').textContent=filterOn?'🔄':'⚙️';
+  if(lightMode==='on'){document.getElementById('lightLbl').textContent='照明ON';document.querySelector('#lightBtn .ic').textContent='☀️';}
+  else if(lightMode==='off'){document.getElementById('lightLbl').textContent='照明OFF';document.querySelector('#lightBtn .ic').textContent='🌙';}
+  else{document.getElementById('lightLbl').textContent='照明AUTO';document.querySelector('#lightBtn .ic').textContent='💡';}
+
+  // Rebuild shrimps
+  shrimps.length=0;
+  if(data.shrimps&&data.shrimps.length>0){
+    for(const sd of data.shrimps){
+      const s=sd.type==='bee'?new BeeShrimp():new ClearShrimp();
+      s.x=sd.x;s.y=sd.y;
+      s.depth=sd.depth;s.baseDepth=sd.baseDepth;
+      s.hunger=sd.hunger;s.hp=sd.hp;
+      s.alive=sd.alive;s.dying=sd.dying;s.dyingTimer=sd.dyingTimer||0;
+      s.babyScale=sd.babyScale!=null?sd.babyScale:1;
+      s.female=sd.female!=null?sd.female:Math.random()<0.5;
+      s.eggs=!!sd.eggs;s.eggTimer=sd.eggTimer||0;
+      s.sick=!!sd.sick;s.sickTimer=sd.sickTimer||0;
+      s.mt=sd.mt||rand(60,120);s.tr=sd.tr||0;
+      s.facing=sd.facing||1;s.state=sd.state||0;
+      s.st=0;s.sd=rand(3,8);
+      shrimps.push(s);
+    }
+  }
+
+  // Rebuild shelters
+  shelters.length=0;
+  if(data.shelters){
+    for(const sh of data.shelters)shelters.push({x:sh.x,y:sh.y,w:sh.w,h:sh.h});
+  }
+  if(shelters.length===0){
+    for(let i=0;i<2;i++)shelters.push({x:rand(W*0.2+i*W*0.4,W*0.35+i*W*0.4),y:SAND_Y-2,w:rand(18,28),h:rand(12,18)});
+  }
+
+  uiTimer=0;
+  return true;
+}
+
+function saveToStorage(){
+  try{
+    localStorage.setItem(SAVE_KEY,JSON.stringify(buildSaveData()));
+    return true;
+  }catch(e){return false;}
+}
+
+function loadFromStorage(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return false;
+    return applySaveData(JSON.parse(raw));
+  }catch(e){return false;}
+}
+
+function exportSave(){
+  const data=JSON.stringify(buildSaveData(),null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='aquarium_save_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+
+function importSave(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(applySaveData(data)){
+        notify('📥 セーブデータを読み込みました！',3000);
+      }else{
+        notify('⚠️ データ形式が正しくありません',3000);
+      }
+    }catch(err){
+      notify('⚠️ ファイルの読み込みに失敗しました',3000);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Auto-save every 30 seconds
+setInterval(()=>{if(!gameOver&&shrimps.length>0)saveToStorage();},30000);
+
+// Save/Load buttons
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  if(saveToStorage())notify('💾 セーブしました！',2000);
+  else notify('⚠️ セーブに失敗しました',2000);
+});
+document.getElementById('loadBtn').addEventListener('click',()=>{
+  if(loadFromStorage()){notify('📂 ロードしました！',2000);}
+  else{notify('⚠️ セーブデータがありません',2000);}
+});
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  exportSave();notify('📤 エクスポートしました',2000);
+});
+document.getElementById('importBtn').addEventListener('click',()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change',(e)=>{
+  if(e.target.files.length>0){importSave(e.target.files[0]);e.target.value='';}
+});
+
+// Try auto-load on startup
+if(localStorage.getItem(SAVE_KEY)){
+  if(loadFromStorage()){
+    notify('📂 前回のデータを復元しました！',3000);
+  }else{
+    notify('🌊 癒し水槽へようこそ\n餌やりと水換えでエビを育てよう！',4000);
+  }
+}else{
+  notify('🌊 癒し水槽へようこそ\n餌やりと水換えでエビを育てよう！',4000);
+}
+
 requestAnimationFrame(render);
 </script>
 </body>
