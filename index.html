@@ -828,16 +828,20 @@ function drawBubs(ctx,t){
 const foods=[];
 class Food{
   constructor(x){this.x=x;this.y=35;this.ty=rand(SAND_Y-50,SAND_Y-5);this.sp=rand(10,20);this.sz=rand(1.5,3);
-    this.eaten=false;this.sw=rand(0,Math.PI*2);this.alpha=1;this.rot=rand(0,Math.PI*2);}
+    this.eaten=false;this.sw=rand(0,Math.PI*2);this.alpha=1;this.rot=rand(0,Math.PI*2);
+    this.age=0;this.rotting=false;}
   update(dt){
     if(this.eaten){this.alpha-=dt*2.5;return;}
     if(this.y<this.ty){this.y+=this.sp*dt;this.x+=Math.sin(time*1.2+this.sw)*5*dt;this.rot+=dt*0.7;}
+    else{this.age+=dt;if(this.age>30&&!this.rotting){this.rotting=true;}}
+    if(this.rotting){this.alpha-=dt*0.04;}
   }
   draw(ctx){
     if(this.alpha<=0)return;
     ctx.save();ctx.globalAlpha=this.alpha;ctx.translate(this.x,this.y);ctx.rotate(this.rot);
-    ctx.fillStyle='#b8884a';ctx.beginPath();ctx.ellipse(0,0,this.sz*1.1,this.sz*0.75,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(200,160,100,0.45)';ctx.beginPath();ctx.ellipse(-this.sz*0.15,-this.sz*0.15,this.sz*0.35,this.sz*0.25,0,0,Math.PI*2);ctx.fill();
+    const rc=this.rotting?'#8a7a4a':'#b8884a';
+    ctx.fillStyle=rc;ctx.beginPath();ctx.ellipse(0,0,this.sz*1.1,this.sz*0.75,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=this.rotting?'rgba(140,120,70,0.45)':'rgba(200,160,100,0.45)';ctx.beginPath();ctx.ellipse(-this.sz*0.15,-this.sz*0.15,this.sz*0.35,this.sz*0.25,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
   get settled(){return this.y>=this.ty-2}
@@ -1281,7 +1285,11 @@ function drawPostProcess(ctx){
 // ============================================================
 function render(now){
   const dt=Math.min((now-lt)/1000,0.05);lt=now;time+=dt;
-  wq=Math.max(0,wq-dt*0.025);
+  // Water quality: base decay + bioload + rotting food
+  const aliveCount=shrimps.filter(s=>s.alive).length;
+  const bioLoad=0.025+aliveCount*0.003;
+  const rottingFood=foods.filter(f=>f.rotting&&!f.eaten).length;
+  wq=Math.max(0,wq-dt*(bioLoad+rottingFood*0.012));
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
   wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
@@ -1351,10 +1359,14 @@ function render(now){
 // ============================================================
 //  INPUT (touch + mouse)
 // ============================================================
+let lastFeedTime=0;
 document.getElementById('feedBtn').addEventListener('click',()=>{
   if(shrimps.filter(s=>s.alive).length===0)return;
+  const uneaten=foods.filter(f=>!f.eaten&&f.settled).length;
+  if(uneaten>=8){notify('⚠️ 餌が多すぎます！水が汚れます',3000);return;}
   for(let i=0;i<randI(3,5);i++)foods.push(new Food(rand(60,W-60)));
-  notify('🍤 餌を落としました');
+  if(uneaten>=4){notify('🍤 餌を落としました（残餌多め⚠️）');}
+  else{notify('🍤 餌を落としました');}
   shrimps.forEach((s,i)=>{
     if(!s.alive)return;
     s.hunger=Math.min(100,s.hunger+5);
