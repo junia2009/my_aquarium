@@ -959,7 +959,8 @@ class Shrimp{
   molt(){
     shells.push(new MoltedShell(this.x,this.y-3,this instanceof BeeShrimp));
     this.tr=Math.min(this.tr+0.06,0.25);
-    notify('🦐 脱皮しました！');
+    if(wq<40){notify('🦐 脱皮しました！水が汚れやすくなります💧');}
+    else{notify('🦐 脱皮しました！');}
   }
   drawShadow(ctx,bw){
     ctx.save();ctx.globalAlpha=0.07;ctx.fillStyle='rgba(0,12,25,1)';
@@ -1285,11 +1286,12 @@ function drawPostProcess(ctx){
 // ============================================================
 function render(now){
   const dt=Math.min((now-lt)/1000,0.05);lt=now;time+=dt;
-  // Water quality: base decay + bioload + rotting food
+  // Water quality: base decay + bioload + rotting food + shells
   const aliveCount=shrimps.filter(s=>s.alive).length;
   const bioLoad=0.025+aliveCount*0.003;
   const rottingFood=foods.filter(f=>f.rotting&&!f.eaten).length;
-  wq=Math.max(0,wq-dt*(bioLoad+rottingFood*0.012));
+  const shellCount=shells.length;
+  wq=Math.max(0,wq-dt*(bioLoad+rottingFood*0.012+shellCount*0.006));
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
   wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
