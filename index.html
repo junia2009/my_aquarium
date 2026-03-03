@@ -54,11 +54,11 @@
   .panel .lb{color:rgba(130,180,225,0.55);font-size:10px;letter-spacing:0.03em}
   .panel .v{font-weight:600}
   #shrimpInfo{text-align:right}
-  .wbar{width:110px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-top:4px;overflow:hidden}
+  .wbar{width:110px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-top:4px;overflow:hidden;cursor:default}
   .wbar-fill{width:100%;height:100%;background:linear-gradient(90deg,#2e9cc8,#6ec4e8);border-radius:3px;transition:width .8s ease}
   .stat-row{display:flex;align-items:center;gap:4px;margin-top:2px}
   .stat-lb{font-size:9px;color:rgba(130,180,225,0.4);width:14px;text-align:right}
-  .minibar{width:46px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+  .minibar{width:46px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;cursor:default}
   .minibar-fill{height:100%;border-radius:2px;transition:width .6s ease}
   #bottomWrap{
     display:flex;flex-direction:column;align-items:center;
@@ -146,7 +146,7 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.2.2</div>
+        <div class="sub-info" id="verInfo">v4.2.3</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1353,8 +1353,8 @@ function updateShrimpUI(){
     const hpC=hpP>50?'#6ec8a0':hpP>25?'#e8c44a':'#e85050';
     const hunC=hunP>30?'#6eaee8':'#e88050';
     html+='<div style="margin-bottom:2px"><span class="lb">'+nm+'：</span><span class="v">'+st+'</span>'
-      +'<div class="stat-row"><span class="stat-lb">HP</span><div class="minibar"><div class="minibar-fill" style="width:'+hpP+'%;background:'+hpC+'"></div></div>'
-      +'<span class="stat-lb">餌</span><div class="minibar"><div class="minibar-fill" style="width:'+hunP+'%;background:'+hunC+'"></div></div></div></div>';
+      +'<div class="stat-row"><span class="stat-lb">HP</span><div class="minibar" title="HP: '+hpP+'%"><div class="minibar-fill" style="width:'+hpP+'%;background:'+hpC+'"></div></div>'
+      +'<span class="stat-lb">餌</span><div class="minibar" title="満腹度: '+hunP+'%"><div class="minibar-fill" style="width:'+hunP+'%;background:'+hunC+'"></div></div></div></div>';
   }
   if(vis.length===0)html+='<div><span class="v" style="color:#e85050">エビがいません</span></div>';
   panel.innerHTML=html;
@@ -1454,6 +1454,7 @@ function render(now){
   const tPct=clamp((waterTemp-10)/30*100,0,100);
   const tBar=document.getElementById('tempBar');
   tBar.style.width=tPct+'%';
+  tBar.parentElement.title='水温: '+waterTemp.toFixed(1)+'℃';
   tBar.style.background=(waterTemp>=22&&waterTemp<=26)?'linear-gradient(90deg,#2ec88a,#6ee8b0)':(waterTemp>=18&&waterTemp<=30)?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
 
   // ── Lighting & Algae ──
@@ -1476,6 +1477,7 @@ function render(now){
   wq=clamp(wq+dt*(-bioLoad-rottingFood*0.012-shellCount*0.006+plantPurify+filterBonus),0,100);
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
+  wBarEl.parentElement.title='水質: '+Math.round(wq)+'%';
   wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
 
   for(const s of shrimps)s.update(dt);
