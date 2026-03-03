@@ -44,22 +44,22 @@
   .panel{
     background:rgba(6,16,32,0.65);
     -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
-    border-radius:12px;
+    border-radius:14px;
     border:1px solid rgba(90,170,255,0.10);
-    padding:8px 12px;
+    padding:10px 14px;
     color:rgba(195,225,255,0.88);
-    font-size:11px;line-height:1.65;
+    font-size:13px;line-height:1.7;
     pointer-events:auto;
   }
-  .panel .lb{color:rgba(130,180,225,0.55);font-size:9px;letter-spacing:0.03em}
+  .panel .lb{color:rgba(130,180,225,0.55);font-size:10px;letter-spacing:0.03em}
   .panel .v{font-weight:600}
   #shrimpInfo{text-align:right}
-  .wbar{width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:3px;overflow:hidden}
-  .wbar-fill{width:100%;height:100%;background:linear-gradient(90deg,#2e9cc8,#6ec4e8);border-radius:2px;transition:width .8s ease}
-  .stat-row{display:flex;align-items:center;gap:3px;margin-top:1px}
-  .stat-lb{font-size:7px;color:rgba(130,180,225,0.4);width:12px;text-align:right}
-  .minibar{width:34px;height:3px;background:rgba(255,255,255,0.06);border-radius:1.5px;overflow:hidden}
-  .minibar-fill{height:100%;border-radius:1.5px;transition:width .6s ease}
+  .wbar{width:110px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-top:4px;overflow:hidden}
+  .wbar-fill{width:100%;height:100%;background:linear-gradient(90deg,#2e9cc8,#6ec4e8);border-radius:3px;transition:width .8s ease}
+  .stat-row{display:flex;align-items:center;gap:4px;margin-top:2px}
+  .stat-lb{font-size:9px;color:rgba(130,180,225,0.4);width:14px;text-align:right}
+  .minibar{width:46px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+  .minibar-fill{height:100%;border-radius:2px;transition:width .6s ease}
   #bottomBar{
     padding:0 10px calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
     padding-bottom:calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
@@ -71,17 +71,17 @@
     background:rgba(6,16,32,0.65);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border:1px solid rgba(90,170,255,0.12);
-    border-radius:11px;
-    padding:11px 16px;
+    border-radius:12px;
+    padding:12px 20px;
     color:rgba(195,225,255,0.92);
-    font-size:13px;
+    font-size:14px;
     cursor:pointer;
     transition:all .25s ease;
-    display:flex;align-items:center;gap:5px;
+    display:flex;align-items:center;gap:6px;
     -webkit-tap-highlight-color:transparent;
   }
   .btn:active{background:rgba(20,50,90,0.6);transform:scale(0.96)}
-  .btn .ic{font-size:15px}
+  .btn .ic{font-size:17px}
   #notif{
     position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     background:rgba(6,16,32,0.65);
@@ -94,9 +94,20 @@
   #notif.show{opacity:1}
   .sub-info{
     color:rgba(170,210,240,0.55);
-    font-size:9px;letter-spacing:0.02em;
+    font-size:10px;letter-spacing:0.02em;
     margin-top:5px;
     padding:0 2px;
+  }
+  @media (min-width:900px){
+    .panel{padding:12px 18px;font-size:14px;border-radius:16px}
+    .panel .lb{font-size:11px}
+    .wbar{width:140px;height:7px}
+    .stat-lb{font-size:10px;width:16px}
+    .minibar{width:56px;height:5px}
+    .btn{padding:14px 24px;font-size:15px;border-radius:14px}
+    .btn .ic{font-size:18px}
+    .sub-info{font-size:11px}
+    #notif{font-size:15px;padding:14px 24px}
   }
 </style>
 </head>
