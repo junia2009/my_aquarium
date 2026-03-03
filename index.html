@@ -146,7 +146,7 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.2.3</div>
+        <div class="sub-info" id="verInfo">v4.3.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -163,6 +163,7 @@
         <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
         <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
         <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
+        <button class="btn" id="shopBtn"><span class="ic">🛒</span>エビ追加</button>
         <button class="btn" id="saveBtn"><span class="ic">💾</span>セーブ</button>
         <button class="btn" id="loadBtn"><span class="ic">📂</span>ロード</button>
       </div>
@@ -1489,7 +1490,7 @@ function render(now){
       notify('😢 エビが天国へ旅立ちました…水質が悪化しています！',4000);uiTimer=0;}
     if(s.dying&&s.dyingTimer<=0){shrimps.splice(i,1);uiTimer=0;}
   }
-  if(!gameOver&&shrimps.length===0){gameOver=true;notify('😢 全てのエビがいなくなりました…\nリロードでリスタート',120000);}
+  if(!gameOver&&shrimps.length===0){gameOver=true;notify('😢 全てのエビがいなくなりました…\n🛒「エビ追加」ボタンで新しいエビを迎えよう！',120000);}
 
   breedTimer-=dt;
   if(breedTimer<=0){
@@ -1649,6 +1650,19 @@ document.getElementById('feedSelBtn').addEventListener('click',()=>{
     s.hunger=Math.min(100,s.hunger+3);
     setTimeout(()=>{if(!s.alive)return;s.state=ST.EAT;s.st=0;s.sd=rand(6,12);},600+i*400);
   });
+});
+document.getElementById('shopBtn').addEventListener('click',()=>{
+  const alive=shrimps.filter(s=>s.alive).length;
+  if(alive>=12){notify('⚠️ 水槽が満員です（最大12匹）',3000);return;}
+  const type=Math.random()<0.5?'bee':'clear';
+  const s=type==='bee'?new BeeShrimp():new ClearShrimp();
+  s.baseDepth=Math.random();s.depth=s.baseDepth;
+  s.x=rand(W*0.15,W*0.85);
+  shrimps.push(s);s.pickNewState();
+  if(gameOver){gameOver=false;}
+  const name=type==='bee'?'ビーシュリンプ':'クリアシュリンプ';
+  notify('🦐 '+name+'をお迎えしました！',3000);
+  uiTimer=0;
 });
 document.getElementById('cleanBtn').addEventListener('click',()=>{
   wq=Math.min(100,wq+30);
