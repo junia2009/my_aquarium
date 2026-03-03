@@ -60,12 +60,35 @@
   .stat-lb{font-size:9px;color:rgba(130,180,225,0.4);width:14px;text-align:right}
   .minibar{width:46px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
   .minibar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+  #bottomWrap{
+    display:flex;flex-direction:column;align-items:center;
+    pointer-events:none;z-index:10;
+  }
+  #toggleBarBtn{
+    pointer-events:auto;cursor:pointer;
+    background:rgba(6,16,32,0.55);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border:1px solid rgba(90,170,255,0.10);
+    border-radius:10px 10px 0 0;
+    padding:3px 18px 1px;
+    color:rgba(195,225,255,0.7);font-size:16px;
+    transition:all .25s ease;
+    -webkit-tap-highlight-color:transparent;
+    margin-bottom:-1px;
+  }
+  #toggleBarBtn:active{background:rgba(20,50,90,0.5)}
   #bottomBar{
     padding:0 10px calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
     padding-bottom:calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
     display:flex;gap:7px;justify-content:center;flex-wrap:wrap;
     pointer-events:auto;
     z-index:10;
+    max-height:200px;overflow:hidden;
+    transition:max-height .35s ease,opacity .3s ease,padding .35s ease;
+  }
+  #bottomBar.hidden{
+    max-height:0;opacity:0;padding-top:0;padding-bottom:0;
+    pointer-events:none;
   }
   .btn{
     background:rgba(6,16,32,0.65);
@@ -123,22 +146,24 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.1.0</div>
+        <div class="sub-info" id="verInfo">v4.1.1</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
         <div class="sub-info" style="text-align:right" id="jstClock"></div>
       </div>
     </div>
-    <div id="bottomBar">
-      <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
-      <button class="btn" id="feedSelBtn"><span class="ic">🥬</span>野菜</button>
-      <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
-      <button class="btn" id="heaterBtn"><span class="ic">🌡️</span><span id="heaterLbl">ヒーター</span></button>
-      <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
-      <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
-      <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
-
+    <div id="bottomWrap">
+      <div id="toggleBarBtn">▲ メニュー</div>
+      <div id="bottomBar">
+        <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
+        <button class="btn" id="feedSelBtn"><span class="ic">🥬</span>野菜</button>
+        <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
+        <button class="btn" id="heaterBtn"><span class="ic">🌡️</span><span id="heaterLbl">ヒーター</span></button>
+        <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
+        <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
+        <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
+      </div>
     </div>
   </div>
   <div id="notif"></div>
@@ -1582,6 +1607,14 @@ function render(now){
 // ============================================================
 //  INPUT (touch + mouse)
 // ============================================================
+// Toggle menu bar
+document.getElementById('toggleBarBtn').addEventListener('click',()=>{
+  const bar=document.getElementById('bottomBar');
+  const btn=document.getElementById('toggleBarBtn');
+  bar.classList.toggle('hidden');
+  btn.textContent=bar.classList.contains('hidden')?'▼ メニュー':'▲ メニュー';
+});
+
 let lastFeedTime=0;
 document.getElementById('feedBtn').addEventListener('click',()=>{
   if(shrimps.filter(s=>s.alive).length===0)return;
