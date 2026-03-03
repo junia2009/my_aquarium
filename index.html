@@ -165,9 +165,6 @@
         <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
         <button class="btn" id="saveBtn"><span class="ic">💾</span>セーブ</button>
         <button class="btn" id="loadBtn"><span class="ic">📂</span>ロード</button>
-        <button class="btn" id="exportBtn"><span class="ic">📤</span>エクスポート</button>
-        <input type="file" id="importFile" accept=".json" style="display:none">
-        <button class="btn" id="importBtn"><span class="ic">📥</span>インポート</button>
       </div>
     </div>
   </div>
@@ -1964,16 +1961,6 @@ document.getElementById('loadBtn').addEventListener('click',()=>{
   if(loadFromStorage()){notify('📂 ロードしました！',2000);}
   else{notify('⚠️ セーブデータがありません',2000);}
 });
-document.getElementById('exportBtn').addEventListener('click',()=>{
-  exportSave();notify('📤 エクスポートしました',2000);
-});
-document.getElementById('importBtn').addEventListener('click',()=>{
-  document.getElementById('importFile').click();
-});
-document.getElementById('importFile').addEventListener('change',(e)=>{
-  if(e.target.files.length>0){importSave(e.target.files[0]);e.target.value='';}
-});
-
 // Try auto-load on startup
 if(localStorage.getItem(SAVE_KEY)){
   if(loadFromStorage()){
