@@ -1923,8 +1923,8 @@ function loadFromStorage(){
   }catch(e){return false;}
 }
 
-// Auto-save every 30 seconds
-setInterval(()=>{if(!gameOver&&shrimps.length>0)saveToStorage();},30000);
+// Auto-save every 60 seconds
+setInterval(()=>{if(!gameOver&&shrimps.length>0)saveToStorage();},60000);
 
 // Save/Load buttons
 document.getElementById('saveBtn').addEventListener('click',()=>{
