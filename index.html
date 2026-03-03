@@ -120,8 +120,10 @@
         <div class="panel">
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
+          <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
+          <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v3.1.1</div>
+        <div class="sub-info" id="verInfo">v4.0.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -130,7 +132,10 @@
     </div>
     <div id="bottomBar">
       <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
+      <button class="btn" id="feedSelBtn"><span class="ic">🥬</span>野菜</button>
       <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
+      <button class="btn" id="heaterBtn"><span class="ic">🌡️</span><span id="heaterLbl">ヒーター</span></button>
+      <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
       <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
 
     </div>
@@ -173,6 +178,32 @@ setInterval(updateClock,1000);
 let time=0,lt=performance.now();
 let wq=100;
 let shrimpsReady=false;
+
+// ─── Water Temperature ───
+let waterTemp=25; // ideal: 22-26°C
+let heaterOn=false;
+function getSeasonTemp(){
+  const now=new Date();const m=now.getMonth();
+  // Seasonal base: Jan=8, Apr=18, Jul=32, Oct=20
+  const seasonal=[8,10,14,18,23,28,32,31,27,20,14,10];
+  return seasonal[m];
+}
+let ambientTemp=getSeasonTemp();
+setInterval(()=>{ambientTemp=getSeasonTemp();},60000);
+
+// ─── Filter ───
+let filterOn=false;
+
+// ─── Algae ───
+let algaeLevel=0; // 0-100
+let lightTimer=0;
+
+// ─── Disease ───
+// tracked per-shrimp: s.sick
+
+// ─── Shelter ───
+// Shelter objects reduce stress
+const shelters=[];
 
 // ─── Helpers ───
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -838,21 +869,23 @@ function drawBubs(ctx,t){
 // ============================================================
 const foods=[];
 class Food{
-  constructor(x){this.x=x;this.y=35;this.ty=rand(SAND_Y-50,SAND_Y-5);this.sp=rand(10,20);this.sz=rand(1.5,3);
+  constructor(x,type){this.x=x;this.y=35;this.ty=rand(SAND_Y-50,SAND_Y-5);this.sp=rand(10,20);this.sz=rand(1.5,3);
     this.eaten=false;this.sw=rand(0,Math.PI*2);this.alpha=1;this.rot=rand(0,Math.PI*2);
-    this.age=0;this.rotting=false;}
+    this.age=0;this.rotting=false;this.type=type||'normal';}
   update(dt){
     if(this.eaten){this.alpha-=dt*2.5;return;}
     if(this.y<this.ty){this.y+=this.sp*dt;this.x+=Math.sin(time*1.2+this.sw)*5*dt;this.rot+=dt*0.7;}
-    else{this.age+=dt;if(this.age>30&&!this.rotting){this.rotting=true;}}
-    if(this.rotting){this.alpha-=dt*0.04;}
+    else{const rotTime=this.type==='veggie'?45:30;this.age+=dt;if(this.age>rotTime&&!this.rotting){this.rotting=true;}}
+    if(this.rotting){const rottingSpeed=this.type==='veggie'?0.025:0.04;this.alpha-=dt*rottingSpeed;}
   }
   draw(ctx){
     if(this.alpha<=0)return;
     ctx.save();ctx.globalAlpha=this.alpha;ctx.translate(this.x,this.y);ctx.rotate(this.rot);
-    const rc=this.rotting?'#8a7a4a':'#b8884a';
+    let rc,hi;
+    if(this.type==='veggie'){rc=this.rotting?'#6a7a3a':'#5a9a3a';hi=this.rotting?'rgba(100,120,50,0.45)':'rgba(90,170,70,0.45)';}
+    else{rc=this.rotting?'#8a7a4a':'#b8884a';hi=this.rotting?'rgba(140,120,70,0.45)':'rgba(200,160,100,0.45)';}
     ctx.fillStyle=rc;ctx.beginPath();ctx.ellipse(0,0,this.sz*1.1,this.sz*0.75,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=this.rotting?'rgba(140,120,70,0.45)':'rgba(200,160,100,0.45)';ctx.beginPath();ctx.ellipse(-this.sz*0.15,-this.sz*0.15,this.sz*0.35,this.sz*0.25,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=hi;ctx.beginPath();ctx.ellipse(-this.sz*0.15,-this.sz*0.15,this.sz*0.35,this.sz*0.25,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
   get settled(){return this.y>=this.ty-2}
@@ -895,6 +928,9 @@ class Shrimp{
     this.hunger=100;this.hp=100;
     this.alive=true;this.dying=false;this.dyingTimer=0;
     this.babyScale=1;this.excreteTimer=0;
+    this.female=Math.random()<0.5;
+    this.eggs=false;this.eggTimer=0;
+    this.sick=false;this.sickTimer=0;
   }
   pickWT(){
     this.tx=clamp(this.x+rand(-80,80),30,W-30);
@@ -914,13 +950,37 @@ class Shrimp{
     this.hunger=Math.max(0,this.hunger-0.015*dt);
     if(this.hunger<20)this.hp=Math.max(0,this.hp-0.008*dt);
     if(wq<20)this.hp=Math.max(0,this.hp-0.008*dt);
-    // Overcrowding stress: >8 shrimp = HP drain
+    // Temperature stress
+    if(waterTemp<18||waterTemp>30)this.hp=Math.max(0,this.hp-0.012*dt);
+    else if(waterTemp<20||waterTemp>28)this.hp=Math.max(0,this.hp-0.004*dt);
+    // Overcrowding stress: >8 shrimp = HP drain (reduced if shelters)
     const aliveN=shrimps.filter(s=>s.alive).length;
-    if(aliveN>8)this.hp=Math.max(0,this.hp-0.005*(aliveN-8)*dt);
+    const shelterBonus=Math.min(shelters.length*0.3,0.9);
+    if(aliveN>8)this.hp=Math.max(0,this.hp-0.005*(aliveN-8)*(1-shelterBonus)*dt);
+    // Shelter stress relief
+    if(shelters.length>0&&this.hp<100&&this.hp>10)this.hp=Math.min(100,this.hp+0.001*shelters.length*dt);
     if(this.hunger>50&&wq>50&&this.hp<100)this.hp=Math.min(100,this.hp+0.003*dt);
     if(this.babyScale<1)this.babyScale=Math.min(1,this.babyScale+dt*0.0008);
-    // Excretion timer (food digested → tiny wq hit)
+    // Excretion timer
     if(this.excreteTimer>0){this.excreteTimer-=dt;if(this.excreteTimer<=0){wq=Math.max(0,wq-0.3);}}
+    // Disease
+    if(this.sick){this.sickTimer-=dt;this.hp=Math.max(0,this.hp-0.006*dt);
+      if(this.sickTimer<=0){this.sick=false;notify('💊 エビが回復しました！');}
+      // Contagion
+      if(Math.random()<0.00005*dt){
+        const healthy=shrimps.filter(s=>s.alive&&!s.sick&&s!==this);
+        if(healthy.length>0){const t=healthy[randI(0,healthy.length-1)];
+          t.sick=true;t.sickTimer=rand(60,120);notify('🦠 病気が伝染しました…');}
+      }
+    }
+    // Egg carrying
+    if(this.eggs){this.eggTimer-=dt;
+      if(this.eggTimer<=0){this.eggs=false;this.hatchBabies();}
+    }
+    // Algae grazing (natural food source)
+    if(algaeLevel>20&&this.hunger<60&&Math.random()<0.0003*dt){
+      this.hunger=Math.min(100,this.hunger+3);algaeLevel=Math.max(0,algaeLevel-0.5);
+    }
     this.st+=dt;
     this.lp+=dt*(this.state===ST.WALK?8:this.state===ST.SWIM?14:5);
     this.bw+=dt*2;this.ap+=dt*2.5;
@@ -965,7 +1025,7 @@ class Shrimp{
         for(const f of foods){if(f.eaten||!f.settled)continue;const fd=Math.abs(f.x-this.x)+Math.abs(f.y-this.y);if(fd<md){md=fd;near=f;}}
         if(near){const dx=near.x-this.x,dy=near.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
           if(d>7){this.facing=dx>0?1:-1;this.x+=(dx/d)*this.speed*dt;this.y+=(dy/d)*this.speed*dt;}
-          else{near.eaten=true;this.hunger=Math.min(100,this.hunger+15);this.excreteTimer=rand(15,30);}
+          else{near.eaten=true;const amt=near.type==='veggie'?10:15;this.hunger=Math.min(100,this.hunger+amt);this.excreteTimer=rand(15,30);}
         }else{this.state=ST.TSUMA;this.st=0;this.sd=rand(3,6);}
         break;}
       case ST.FOLLOW:this.jm=false;break;
@@ -973,10 +1033,34 @@ class Shrimp{
     this.x=clamp(this.x,20,W-20);this.y=clamp(this.y,60,SAND_Y+2);
   }
   molt(){
+    // Molt failure risk: bad water quality or temperature
+    let failChance=0;
+    if(wq<30)failChance+=0.25;
+    else if(wq<50)failChance+=0.08;
+    if(waterTemp<20||waterTemp>28)failChance+=0.15;
+    if(this.hunger<20)failChance+=0.10;
+    if(Math.random()<failChance){
+      this.hp=Math.max(0,this.hp-40);
+      notify('💀 脱皮に失敗しました！HPが大幅減少',4000);
+      return;
+    }
     shells.push(new MoltedShell(this.x,this.y-3,this instanceof BeeShrimp));
     this.tr=Math.min(this.tr+0.06,0.25);
     if(wq<40){notify('🦐 脱皮しました！水が汚れやすくなります💧');}
     else{notify('🦐 脱皮しました！');}
+  }
+  hatchBabies(){
+    const count=randI(2,4);
+    for(let i=0;i<count;i++){
+      if(shrimps.filter(s=>s.alive).length>=12)break;
+      const baby=(this instanceof BeeShrimp)?new BeeShrimp():new ClearShrimp();
+      baby.x=clamp(this.x+rand(-15,15),30,W-30);
+      baby.y=clamp(this.y+rand(-5,5),60,SAND_Y);
+      baby.babyScale=0.35;baby.baseDepth=rand(0,1);baby.depth=baby.baseDepth;
+      baby.female=Math.random()<0.5;
+      shrimps.push(baby);baby.pickNewState();
+    }
+    notify('🎉 '+count+'匹の稚エビが孵化しました！',4000);uiTimer=0;
   }
   drawShadow(ctx,bw){
     ctx.save();ctx.globalAlpha=0.07;ctx.fillStyle='rgba(0,12,25,1)';
@@ -1075,6 +1159,10 @@ class BeeShrimp extends Shrimp{
     ctx.strokeStyle='rgba(200,140,120,0.4)';ctx.lineWidth=0.6;
     for(let i=0;i<5;i++){const lx=7+i*2.8,aO=ay(.65+i*.05),baseY2=6+aO,sw=Math.sin(this.lp*1.2+i*1.3)*2;
       ctx.beginPath();ctx.moveTo(lx,baseY2);ctx.lineTo(lx+sw*.3,baseY2+4);ctx.lineTo(lx+sw,baseY2+7.5);ctx.stroke();}
+    // EGGS (if carrying)
+    if(this.eggs){ctx.fillStyle='rgba(220,180,60,0.7)';
+      for(let i=0;i<6;i++){const ex=-10+i*4,ey=6.5+ay((ex+22)/44)+Math.sin(time*2+i)*0.3;
+        ctx.beginPath();ctx.arc(ex,ey,1.4,0,Math.PI*2);ctx.fill();}}
     // ROSTRUM
     ctx.fillStyle='#c43333';ctx.beginPath();ctx.moveTo(21,-3.5+a8);ctx.lineTo(26+tO,-5+a8);ctx.lineTo(21,-2+a8);ctx.closePath();ctx.fill();
     // EYE
@@ -1082,6 +1170,9 @@ class BeeShrimp extends Shrimp{
     ctx.fillStyle='rgba(160,60,50,0.4)';ctx.beginPath();ctx.ellipse(eyeX,eyeY+1.2,1.2,1.8,0.15,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(eyeX+.3,eyeY,1.5,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.7)';ctx.beginPath();ctx.arc(eyeX+.8,eyeY-.5,.45,0,Math.PI*2);ctx.fill();
+    // SICK indicator
+    if(this.sick){ctx.globalAlpha=0.5+Math.sin(time*3)*0.2;ctx.fillStyle='rgba(180,120,220,0.6)';
+      ctx.beginPath();ctx.arc(0,-12,2,0,Math.PI*2);ctx.fill();}
     // ANTENNAE
     this.drawAnt(ctx,22,-3+a8,1);
     // TSUMATUMA
@@ -1161,11 +1252,18 @@ class ClearShrimp extends Shrimp{
     // PEREIOPODS
     ctx.strokeStyle='rgba(170,195,185,.28)';ctx.lineWidth=.5;
     for(let i=0;i<4;i++){const lx=7+i*3,aO=ay(.65+i*.06),baseY2=6+aO,sw=Math.sin(this.lp*1.2+i*1.3)*1.5;ctx.beginPath();ctx.moveTo(lx,baseY2);ctx.lineTo(lx+sw*.3,baseY2+3.5);ctx.lineTo(lx+sw,baseY2+6);ctx.stroke();}
+    // EGGS (if carrying)
+    if(this.eggs){ctx.globalAlpha=alpha*0.8;ctx.fillStyle='rgba(200,180,80,0.6)';
+      for(let i=0;i<5;i++){const ex=-8+i*4,ey=6+ay((ex+22)/44)+Math.sin(time*2+i)*0.3;
+        ctx.beginPath();ctx.arc(ex,ey,1.2,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=alpha;}
     // ROSTRUM
     ctx.fillStyle='rgba(185,210,200,.25)';ctx.beginPath();ctx.moveTo(21,-3.5+a8);ctx.lineTo(25,-4.5+a8);ctx.lineTo(21,-2+a8);ctx.closePath();ctx.fill();
     // EYE
     const eyeX=19.5,eyeY=-4.5+a8;ctx.globalAlpha=.75;ctx.fillStyle='#222';ctx.beginPath();ctx.arc(eyeX+.3,eyeY,1.3,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(eyeX+.7,eyeY-.4,.35,0,Math.PI*2);ctx.fill();ctx.globalAlpha=alpha;
+    // SICK indicator
+    if(this.sick){ctx.globalAlpha=0.5+Math.sin(time*3)*0.2;ctx.fillStyle='rgba(180,120,220,0.5)';
+      ctx.beginPath();ctx.arc(0,-11,1.8,0,Math.PI*2);ctx.fill();ctx.globalAlpha=alpha;}
     // ANTENNAE
     ctx.globalAlpha=alpha*.7;this.drawAnt(ctx,22,-3+a8,.85,.7);ctx.globalAlpha=alpha;
     // TSUMATUMA
@@ -1186,10 +1284,17 @@ for(let i=0;i<3;i++){const s=new BeeShrimp();s.baseDepth=_depths[i];s.depth=_dep
 for(let i=0;i<2;i++){const s=new ClearShrimp();s.baseDepth=_depths[3+i];s.depth=_depths[3+i];s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
 for(const s of shrimps)s.pickNewState();
 shrimpsReady=true;
-let breedTimer=120,uiTimer=0,gameOver=false;
+
+// Initialize shelters (driftwood / rock hideouts)
+for(let i=0;i<2;i++){
+  shelters.push({x:rand(W*0.2+i*W*0.4,W*0.35+i*W*0.4),y:SAND_Y-2,w:rand(18,28),h:rand(12,18)});
+}
+let breedTimer=120,uiTimer=0,gameOver=false,diseaseTimer=rand(180,360);
 const CIRC=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
 function shrimpStatusText(s){
   if(s.dying)return '⭐ …';
+  if(s.sick)return '🤒 病気';
+  if(s.eggs)return '🥚 抱卵中';
   if(s.hp<20)return '😰 弱ってる';
   if(s.hunger<15)return '😣 お腹すいた';
   if(s.hunger<30)return '🤔 少し空腹';
@@ -1200,6 +1305,7 @@ function updateShrimpUI(){
   let bN=0,cN=0,html='';
   const vis=shrimps.filter(s=>s.alive||s.dying);
   html+='<div style="margin-bottom:2px"><span class="lb">匹数：</span><span class="v">'+vis.length+'匹</span></div>';
+  if(algaeLevel>30)html+='<div style="margin-bottom:2px"><span class="lb">コケ：</span><span class="v" style="color:'+(algaeLevel>60?'#e8c44a':'#6ec8a0')+'">'+Math.round(algaeLevel)+'%</span></div>';
   for(const s of shrimps){
     if(!s.alive&&!s.dying)continue;
     let nm;
@@ -1302,13 +1408,33 @@ function drawPostProcess(ctx){
 // ============================================================
 function render(now){
   const dt=Math.min((now-lt)/1000,0.05);lt=now;time+=dt;
-  // Water quality: base decay + bioload + rotting food + shells - plant purification
+  // ── Water Temperature ──
+  const targetTemp=heaterOn?25:ambientTemp;
+  waterTemp+=(targetTemp-waterTemp)*dt*0.008;
+  waterTemp=clamp(waterTemp,0,45);
+  const tmpEl=document.getElementById('tempVal');
+  tmpEl.textContent=waterTemp.toFixed(1)+'℃';
+  tmpEl.style.color=(waterTemp>=22&&waterTemp<=26)?'rgba(195,225,255,0.88)':(waterTemp>=18&&waterTemp<=30)?'#e8c44a':'#e85050';
+  const tPct=clamp((waterTemp-10)/30*100,0,100);
+  const tBar=document.getElementById('tempBar');
+  tBar.style.width=tPct+'%';
+  tBar.style.background=(waterTemp>=22&&waterTemp<=26)?'linear-gradient(90deg,#2ec88a,#6ee8b0)':(waterTemp>=18&&waterTemp<=30)?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
+
+  // ── Lighting & Algae ──
+  const jstH=new Date(Date.now()+(new Date().getTimezoneOffset()+540)*60000).getHours();
+  const isDaylight=jstH>=7&&jstH<19;
+  if(isDaylight){algaeLevel=Math.min(100,algaeLevel+0.002*dt);}
+  else{algaeLevel=Math.max(0,algaeLevel-0.0005*dt);}
+  // Algae dims glass if too high (visual handled in drawGlass)
+
+  // ── Water quality ──
   const aliveCount=shrimps.filter(s=>s.alive).length;
   const bioLoad=0.025+aliveCount*0.003;
   const rottingFood=foods.filter(f=>f.rotting&&!f.eaten).length;
   const shellCount=shells.length;
-  const plantPurify=plants.length*0.0008; // water plants purify water
-  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.012-shellCount*0.006+plantPurify),0,100);
+  const plantPurify=plants.length*0.0008;
+  const filterBonus=filterOn?0.012:0;
+  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.012-shellCount*0.006+plantPurify+filterBonus),0,100);
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
   wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
@@ -1327,18 +1453,34 @@ function render(now){
   breedTimer-=dt;
   if(breedTimer<=0){
     breedTimer=rand(90,150);
-    const alive=shrimps.filter(s=>s.alive);
-    if(alive.length>=2&&alive.length<10){
+    const alive=shrimps.filter(s=>s.alive&&!s.sick);
+    if(alive.length>=2&&alive.length<12){
       const avgHp=alive.reduce((a,e)=>a+e.hp,0)/alive.length;
       const avgHun=alive.reduce((a,e)=>a+e.hunger,0)/alive.length;
-      if(avgHp>80&&avgHun>60&&wq>70&&Math.random()<0.25){
-        const parent=alive[randI(0,alive.length-1)];
-        const baby=(parent instanceof BeeShrimp)?new BeeShrimp():new ClearShrimp();
-        baby.x=clamp(parent.x+rand(-20,20),30,W-30);baby.y=clamp(parent.y+rand(-5,5),60,SAND_Y);
-        baby.babyScale=0.4;baby.baseDepth=rand(0,1);baby.depth=baby.baseDepth;
-        shrimps.push(baby);baby.pickNewState();
-        notify('🎉 赤ちゃんエビが誕生しました！',4000);uiTimer=0;
+      if(avgHp>80&&avgHun>60&&wq>70&&waterTemp>=22&&waterTemp<=26&&Math.random()<0.30){
+        const females=alive.filter(s=>s.female&&!s.eggs&&s.babyScale>=0.9);
+        if(females.length>0){
+          const mom=females[randI(0,females.length-1)];
+          mom.eggs=true;mom.eggTimer=rand(60,100);
+          notify('🥚 抱卵しました！孵化を待ちましょう',4000);uiTimer=0;
+        }
       }
+    }
+  }
+
+  // ── Disease random event ──
+  diseaseTimer-=dt;
+  if(diseaseTimer<=0){
+    diseaseTimer=rand(180,360);
+    const alive2=shrimps.filter(s=>s.alive&&!s.sick);
+    let dChance=0.05;
+    if(wq<30)dChance+=0.25;
+    if(waterTemp<20||waterTemp>28)dChance+=0.15;
+    if(aliveCount>8)dChance+=0.10;
+    if(Math.random()<dChance&&alive2.length>0){
+      const victim=alive2[randI(0,alive2.length-1)];
+      victim.sick=true;victim.sickTimer=rand(60,120);
+      notify('🦠 エビが病気になりました…',4000);uiTimer=0;
     }
   }
 
@@ -1369,6 +1511,36 @@ function render(now){
 
   drawHaze(X,time);
   drawBubs(X,time);
+  // Draw algae on glass if level high
+  if(algaeLevel>15){
+    X.save();X.globalAlpha=algaeLevel*0.002;
+    X.fillStyle='rgba(80,130,50,0.3)';
+    // Patchy algae on left/right edges and bottom
+    for(let i=0;i<Math.floor(algaeLevel/8);i++){
+      const ax=Math.random()<0.5?rand(2,18):rand(W-18,W-2);
+      const ay=rand(H*0.2,H*0.9);
+      X.beginPath();X.arc(ax,ay,rand(3,8+algaeLevel*0.08),0,Math.PI*2);X.fill();
+    }
+    // Bottom algae
+    for(let i=0;i<Math.floor(algaeLevel/12);i++){
+      const ax=rand(20,W-20),ay=rand(SAND_Y-15,SAND_Y+5);
+      X.beginPath();X.arc(ax,ay,rand(2,6),0,Math.PI*2);X.fill();
+    }
+    X.restore();
+  }
+
+  // Draw shelter
+  for(const sh of shelters){
+    X.save();X.translate(sh.x,sh.y);
+    X.fillStyle='rgba(100,80,55,0.6)';
+    X.beginPath();X.moveTo(-sh.w/2,0);X.lineTo(0,-sh.h);X.lineTo(sh.w/2,0);X.closePath();X.fill();
+    X.fillStyle='rgba(80,65,42,0.5)';
+    X.fillRect(-sh.w/2,0,sh.w,3);
+    X.strokeStyle='rgba(60,50,35,0.3)';X.lineWidth=0.5;
+    X.beginPath();X.moveTo(-sh.w/2,0);X.lineTo(0,-sh.h);X.lineTo(sh.w/2,0);X.closePath();X.stroke();
+    X.restore();
+  }
+
   drawGlass(X);
   drawPostProcess(X);
 
@@ -1384,18 +1556,47 @@ document.getElementById('feedBtn').addEventListener('click',()=>{
   if(shrimps.filter(s=>s.alive).length===0)return;
   const uneaten=foods.filter(f=>!f.eaten&&f.settled).length;
   if(uneaten>=8){notify('⚠️ 餌が多すぎます！水が汚れます',3000);return;}
-  for(let i=0;i<randI(3,5);i++)foods.push(new Food(rand(60,W-60)));
+  for(let i=0;i<randI(3,5);i++)foods.push(new Food(rand(60,W-60),'normal'));
   if(uneaten>=4){notify('🍤 餌を落としました（残餌多め⚠️）');}
-  else{notify('🍤 餌を落としました');}
+  else{notify('🍤 エビ用フードを落としました');}
   shrimps.forEach((s,i)=>{
     if(!s.alive)return;
     s.hunger=Math.min(100,s.hunger+5);
     setTimeout(()=>{if(!s.alive)return;s.state=ST.EAT;s.st=0;s.sd=rand(6,12);},600+i*400);
   });
 });
+// Vegetable food button
+document.getElementById('feedSelBtn').addEventListener('click',()=>{
+  if(shrimps.filter(s=>s.alive).length===0)return;
+  const uneaten=foods.filter(f=>!f.eaten&&f.settled).length;
+  if(uneaten>=8){notify('⚠️ 餌が多すぎます！水が汚れます',3000);return;}
+  for(let i=0;i<randI(2,3);i++)foods.push(new Food(rand(60,W-60),'veggie'));
+  notify('🥬 野菜を落としました（水質に優しい）');
+  shrimps.forEach((s,i)=>{
+    if(!s.alive)return;
+    s.hunger=Math.min(100,s.hunger+3);
+    setTimeout(()=>{if(!s.alive)return;s.state=ST.EAT;s.st=0;s.sd=rand(6,12);},600+i*400);
+  });
+});
 document.getElementById('cleanBtn').addEventListener('click',()=>{
-  wq=Math.min(100,wq+30);notify('💧 水換え完了');
+  wq=Math.min(100,wq+30);
+  algaeLevel=Math.max(0,algaeLevel-15);
+  notify('💧 水換え完了（コケも少し除去）');
   for(let i=0;i<6;i++)setTimeout(()=>spawnBub(rand(60,W-60),rand(SAND_Y-170,SAND_Y-20)),i*150);
+});
+// Heater button
+document.getElementById('heaterBtn').addEventListener('click',()=>{
+  heaterOn=!heaterOn;
+  document.getElementById('heaterLbl').textContent=heaterOn?'ヒーターON':'ヒーター';
+  document.querySelector('#heaterBtn .ic').textContent=heaterOn?'🔥':'🌡️';
+  notify(heaterOn?'🔥 ヒーターON（25℃に維持）':'❄️ ヒーターOFF');
+});
+// Filter button
+document.getElementById('filterBtn').addEventListener('click',()=>{
+  filterOn=!filterOn;
+  document.getElementById('filterLbl').textContent=filterOn?'ろ過ON':'ろ過OFF';
+  document.querySelector('#filterBtn .ic').textContent=filterOn?'🔄':'⚙️';
+  notify(filterOn?'🔄 ろ過装置ON（水質維持）':'⚙️ ろ過装置OFF');
 });
 
 
