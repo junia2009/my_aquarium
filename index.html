@@ -1923,32 +1923,6 @@ function loadFromStorage(){
   }catch(e){return false;}
 }
 
-function exportSave(){
-  const data=JSON.stringify(buildSaveData(),null,2);
-  const blob=new Blob([data],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='aquarium_save_'+new Date().toISOString().slice(0,10)+'.json';
-  a.click();URL.revokeObjectURL(url);
-}
-
-function importSave(file){
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      const data=JSON.parse(e.target.result);
-      if(applySaveData(data)){
-        notify('📥 セーブデータを読み込みました！',3000);
-      }else{
-        notify('⚠️ データ形式が正しくありません',3000);
-      }
-    }catch(err){
-      notify('⚠️ ファイルの読み込みに失敗しました',3000);
-    }
-  };
-  reader.readAsText(file);
-}
-
 // Auto-save every 30 seconds
 setInterval(()=>{if(!gameOver&&shrimps.length>0)saveToStorage();},30000);
 
