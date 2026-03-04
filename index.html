@@ -146,7 +146,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.0.4</div>
+        <div class="sub-info" id="verInfo">v5.0.5</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1748,7 +1748,7 @@ function render(now){
     const ramsCount = ramses.filter(r=>r.alive).length;
     const totalSnail = snailCount + ramsCount;
     // 80%未満
-    if (wq < 80 && totalSnail < 8) {
+    if (wq < 80 && totalSnail < 12) {
       let breedChance = 0.10;
       // 60%未満
       if (wq < 60) breedChance = 0.25;
@@ -1766,10 +1766,10 @@ function render(now){
   }
 
   // --- タニシ・ラムズホーンの繁殖・死亡個体数制御 ---
-  // 繁殖時: 8体を超えたら超過分を即座にalive=false
+  // 繁殖時: 12体を超えたら超過分を即座にalive=false
   let allSnails = snails.filter(s=>s.alive).concat(ramses.filter(r=>r.alive));
-  if (allSnails.length > 8) {
-    for (let i = 8; i < allSnails.length; i++) allSnails[i].alive = false;
+  if (allSnails.length > 12) {
+    for (let i = 12; i < allSnails.length; i++) allSnails[i].alive = false;
   }
   // 死亡時: 4体未満にはならないように
   allSnails = snails.filter(s=>s.alive).concat(ramses.filter(r=>r.alive));
