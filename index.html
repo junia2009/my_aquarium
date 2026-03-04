@@ -146,7 +146,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.0.1</div>
+        <div class="sub-info" id="verInfo">v5.0.2</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1738,7 +1738,7 @@ function render(now){
       }
     }
   }
-  // --- タニシ・ラムズホーンの繁殖ロジック ---
+  // --- タニシ・ラムズホーンの繁殖ロジック（段階式） ---
   if (!window.snailBreedTimer) window.snailBreedTimer = 0;
   window.snailBreedTimer += dt;
   if (window.snailBreedTimer > 2.5) { // 2.5秒ごとに判定
@@ -1746,11 +1746,14 @@ function render(now){
     const snailCount = snails.filter(s=>s.alive).length;
     const ramsCount = ramses.filter(r=>r.alive).length;
     const totalSnail = snailCount + ramsCount;
-    if (wq < 40 && totalSnail < 8) {
-      // 4体未満なら高確率、8体未満なら低確率で繁殖
-      let breedChance = totalSnail < 4 ? 0.7 : 0.18;
+    // 80%未満
+    if (wq < 80 && totalSnail < 8) {
+      let breedChance = 0.10;
+      // 60%未満
+      if (wq < 60) breedChance = 0.25;
+      // 40%未満
+      if (wq < 40) breedChance = totalSnail < 4 ? 0.7 : 0.18;
       if (Math.random() < breedChance) {
-        // どちらかをランダムで増やす
         if (Math.random() < 0.5) {
           snails.push(new Snail(rand(30, W-30), SAND_Y - rand(5, 25)));
         } else {
