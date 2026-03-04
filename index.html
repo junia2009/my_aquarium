@@ -146,7 +146,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.0.2</div>
+        <div class="sub-info" id="verInfo">v5.0.3</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1216,6 +1216,7 @@ class Shrimp{
     if(aliveN>8)this.hp=Math.max(0,this.hp-0.005*(aliveN-8)*(1-shelterBonus)*dt);
     // Shelter stress relief
     if(shelters.length>0&&this.hp<100&&this.hp>10)this.hp=Math.min(100,this.hp+0.001*shelters.length*dt);
+    if(this.hunger>80&&wq>80&&this.hp<100)this.hp=Math.min(100,this.hp+0.05*dt);
     if(this.hunger>50&&wq>50&&this.hp<100)this.hp=Math.min(100,this.hp+0.003*dt);
     if(this.babyScale<1)this.babyScale=Math.min(1,this.babyScale+dt*0.0008);
     // Excretion timer
