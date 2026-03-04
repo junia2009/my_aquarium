@@ -986,7 +986,7 @@ class Shrimp{
     if(!this.alive)return;
     this.hunger=Math.max(0,this.hunger-0.015*dt);
     if(this.hunger<20)this.hp=Math.max(0,this.hp-0.008*dt);
-    if(wq<20)this.hp=Math.max(0,this.hp-0.008*dt);
+    if(wq<20)this.hp=Math.max(0,this.hp-0.003*dt); // 水質悪化時のHP減少も半分以下
     // Temperature stress
     if(waterTemp<18||waterTemp>30)this.hp=Math.max(0,this.hp-0.012*dt);
     else if(waterTemp<20||waterTemp>28)this.hp=Math.max(0,this.hp-0.004*dt);
@@ -1470,12 +1470,12 @@ function render(now){
 
   // ── Water quality ──
   const aliveCount=shrimps.filter(s=>s.alive).length;
-  const bioLoad=0.025+aliveCount*0.003;
+  const bioLoad=0.012+aliveCount*0.0015; // 生体数による悪化を半分以下に
   const rottingFood=foods.filter(f=>f.rotting&&!f.eaten).length;
   const shellCount=shells.length;
-  const plantPurify=plants.length*0.0008;
-  const filterBonus=filterOn?0.012:0;
-  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.012-shellCount*0.006+plantPurify+filterBonus),0,100);
+  const plantPurify=plants.length*0.0016; // 水草の浄化力を2倍に
+  const filterBonus=filterOn?0.018:0; // ろ過の効果も少し強化
+  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.005-shellCount*0.002+plantPurify+filterBonus),0,100); // 腐った餌・抜け殻の悪化も半分以下
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
   wBarEl.parentElement.title='水質: '+Math.round(wq)+'%';
