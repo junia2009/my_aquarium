@@ -1,3 +1,4 @@
+<!-- Snail & RamsHornのクラス定義・初期化は<script>タグ内に移動 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -146,7 +147,7 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.3.2</div>
+        <div class="sub-info" id="verInfo">v5.0.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -173,11 +174,214 @@
 </div>
 
 <script>
+// ── Snail & RamsHorn Classes ──
+class Snail {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.tx = x; this.ty = y;
+    this.speed = 3 + Math.random()*1.5;
+    this.size = 13 + Math.random()*3;
+    this.color = '#ffff00'; // 一時的に目立つ黄色
+    this.alive = true;
+  }
+  update(dt) {
+    if (!this.alive) return;
+    // ゆっくり移動
+    if (Math.abs(this.x - this.tx) < 2 && Math.abs(this.y - this.ty) < 2) {
+      this.tx = clamp(this.x + rand(-40, 40), 30, W - 30);
+      this.ty = clamp(SAND_Y - rand(0, 30), SAND_Y - 30, SAND_Y);
+    }
+    const dx = this.tx - this.x, dy = this.ty - this.y, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 1) {
+      this.x += (dx / d) * this.speed * dt;
+      this.y += (dy / d) * this.speed * dt;
+    }
+  }
+  draw(ctx) {
+    if (!this.alive) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    // 影
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.scale(1.1, 0.5);
+    ctx.beginPath();
+    ctx.arc(0, this.size*1.2, this.size*0.9, 0, Math.PI*2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+    ctx.restore();
+    // 殻本体（グラデーション）
+    let grad = ctx.createRadialGradient(-this.size*0.2, -this.size*0.2, this.size*0.2, 0, 0, this.size);
+    grad.addColorStop(0, 'rgba(230,220,150,0.98)');
+    grad.addColorStop(0.5, 'rgba(180,170,110,0.92)');
+    grad.addColorStop(1, 'rgba(120,100,60,0.92)');
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.size, this.size*0.7, -0.3, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 殻の渦巻き
+    ctx.save();
+    ctx.rotate(-0.3);
+    ctx.strokeStyle = 'rgba(120,100,60,0.35)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    for(let a=0;a<=Math.PI*2*1.1;a+=0.08){
+      let r = this.size*0.7 * (1 - a/(Math.PI*2*1.1)*0.7);
+      ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    }
+    ctx.stroke();
+    ctx.restore();
+    // 殻の光沢
+    ctx.save();
+    ctx.rotate(-0.3);
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.ellipse(-this.size*0.2, -this.size*0.2, this.size*0.5, this.size*0.18, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.restore();
+    // 殻の口
+    ctx.beginPath();
+    ctx.ellipse(this.size*0.7, this.size*0.1, this.size*0.18, this.size*0.12, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#bba96a';
+    ctx.globalAlpha = 0.7;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // 体（軟体部）
+    ctx.save();
+    ctx.rotate(-0.3);
+    let bodyGrad = ctx.createLinearGradient(this.size*0.5, this.size*0.1, this.size*0.7, this.size*0.5);
+    bodyGrad.addColorStop(0, '#b6b08a');
+    bodyGrad.addColorStop(1, '#7a6e4a');
+    ctx.beginPath();
+    ctx.ellipse(this.size*0.8, this.size*0.18, this.size*0.22, this.size*0.13, 0.2, 0, Math.PI*2);
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+    // 触角
+    ctx.strokeStyle = '#6a5e3a';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(this.size*0.93, this.size*0.18);
+    ctx.lineTo(this.size*1.13, this.size*0.05);
+    ctx.moveTo(this.size*0.85, this.size*0.22);
+    ctx.lineTo(this.size*1.01, this.size*0.01);
+    ctx.stroke();
+    // 目
+    ctx.beginPath();
+    ctx.arc(this.size*1.15, 0.04, this.size*0.025, 0, Math.PI*2);
+    ctx.arc(this.size*1.03, 0.00, this.size*0.022, 0, Math.PI*2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+}
+
+class RamsHorn {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.tx = x; this.ty = y;
+    this.speed = 2.5 + Math.random()*1.2;
+    this.size = 11 + Math.random()*2;
+    this.color = '#ff2222'; // 一時的に目立つ赤
+    this.alive = true;
+  }
+  update(dt) {
+    if (!this.alive) return;
+    if (Math.abs(this.x - this.tx) < 2 && Math.abs(this.y - this.ty) < 2) {
+      this.tx = clamp(this.x + rand(-40, 40), 30, W - 30);
+      this.ty = clamp(SAND_Y - rand(0, 30), SAND_Y - 30, SAND_Y);
+    }
+    const dx = this.tx - this.x, dy = this.ty - this.y, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 1) {
+      this.x += (dx / d) * this.speed * dt;
+      this.y += (dy / d) * this.speed * dt;
+    }
+  }
+  draw(ctx) {
+    if (!this.alive) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    // 影
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.scale(1.1, 0.5);
+    ctx.beginPath();
+    ctx.arc(0, this.size*1.2, this.size*0.9, 0, Math.PI*2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+    ctx.restore();
+    // 殻本体（グラデーション）
+    let grad = ctx.createRadialGradient(-this.size*0.2, -this.size*0.2, this.size*0.2, 0, 0, this.size);
+    grad.addColorStop(0, 'rgba(255,180,150,0.98)');
+    grad.addColorStop(0.5, 'rgba(200,100,80,0.92)');
+    grad.addColorStop(1, 'rgba(120,40,40,0.92)');
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 渦巻き模様
+    ctx.save();
+    ctx.strokeStyle = 'rgba(120,40,40,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for(let a=0;a<=Math.PI*2*1.1;a+=0.09){
+      let r = this.size*0.8 * (1 - a/(Math.PI*2*1.1)*0.7);
+      ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    }
+    ctx.stroke();
+    ctx.restore();
+    // 殻の縁ハイライト
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.arc(-this.size*0.18, -this.size*0.18, this.size*0.95, 0.2, 1.2);
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
+    ctx.restore();
+    // 殻の口
+    ctx.beginPath();
+    ctx.arc(this.size*0.7, this.size*0.2, this.size*0.18, 0, Math.PI*2);
+    ctx.fillStyle = '#e0bba0';
+    ctx.globalAlpha = 0.7;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // 体（軟体部）
+    let bodyGrad = ctx.createLinearGradient(this.size*0.7, this.size*0.2, this.size*1.0, this.size*0.5);
+    bodyGrad.addColorStop(0, '#e0c0b0');
+    bodyGrad.addColorStop(1, '#a07060');
+    ctx.beginPath();
+    ctx.ellipse(this.size*0.85, this.size*0.23, this.size*0.22, this.size*0.13, 0.1, 0, Math.PI*2);
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+    // 触角
+    ctx.strokeStyle = '#a07060';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(this.size*0.97, this.size*0.23);
+    ctx.lineTo(this.size*1.13, this.size*0.09);
+    ctx.moveTo(this.size*0.89, this.size*0.27);
+    ctx.lineTo(this.size*1.01, this.size*0.04);
+    ctx.stroke();
+    // 目
+    ctx.beginPath();
+    ctx.arc(this.size*1.15, 0.09, this.size*0.025, 0, Math.PI*2);
+    ctx.arc(this.size*1.03, 0.04, this.size*0.022, 0, Math.PI*2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+    ctx.restore();
+  }
+}
 // ============================================================
 //  癒し水槽 ― 海老育成アプリ  (Mobile / Advanced Water)
 // ============================================================
 const C=document.getElementById('c'),X=C.getContext('2d');
 let W=400,H=780,SAND_Y=620;
+
+// ── Snail & RamsHorn 配列と初期化 ──（SAND_Y定義後に移動）
+const snails = [new Snail(80, SAND_Y - 5), new Snail(200, SAND_Y - 5)];
+const ramses = [new RamsHorn(300, SAND_Y - 5), new RamsHorn(400, SAND_Y - 5)];
 
 function resizeCanvas(){
   const wrap=document.getElementById('wrap');
@@ -190,6 +394,23 @@ function resizeCanvas(){
   C.width=W;C.height=H;
   SAND_Y=Math.round(H*0.795);
   initTerrain();
+  // スネール座標をSAND_Yに合わせて補正
+  if (typeof snails !== 'undefined' && typeof ramses !== 'undefined') syncSnailsToSand();
+}
+
+function syncSnailsToSand(){
+  for (const s of snails){
+    s.y = clamp(s.y, SAND_Y - 30, SAND_Y);
+    s.ty = clamp(s.ty, SAND_Y - 30, SAND_Y);
+    s.x = clamp(s.x, 30, W - 30);
+    s.tx = clamp(s.tx, 30, W - 30);
+  }
+  for (const r of ramses){
+    r.y = clamp(r.y, SAND_Y - 30, SAND_Y);
+    r.ty = clamp(r.ty, SAND_Y - 30, SAND_Y);
+    r.x = clamp(r.x, 30, W - 30);
+    r.tx = clamp(r.tx, 30, W - 30);
+  }
 }
 
 // JST Clock
@@ -1445,6 +1666,8 @@ function drawPostProcess(ctx){
 // ============================================================
 function render(now){
   const dt=Math.min((now-lt)/1000,0.05);lt=now;time+=dt;
+  for(const s of snails) s.update(dt);
+  for(const r of ramses) r.update(dt);
   // ── Water Temperature ──
   const targetTemp=heaterOn?25:ambientTemp;
   waterTemp+=(targetTemp-waterTemp)*dt*0.008;
@@ -1546,6 +1769,8 @@ function render(now){
   drawParts(X);
   for(const f of foods)f.draw(X);
   for(const s of shells)s.draw(X);
+  for(const s of snails) s.draw(X);
+  for(const r of ramses) r.draw(X);
 
   const _ds=[...shrimps].sort((a,b)=>b.depth-a.depth);for(const s of _ds)s.draw(X);
 
