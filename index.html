@@ -1,17 +1,16 @@
-<!-- Snail & RamsHornのクラス定義・初期化は<script>タグ内に移動 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="癒し水槽">
-<meta name="theme-color" content="#2a8ab5">
-<title>癒し水槽 ― 海老育成</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="癒し水槽">
+  <meta name="theme-color" content="#2a8ab5">
+  <title>癒し水槽 ― 海老育成</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{
@@ -144,14 +143,14 @@
         <div class="panel">
           <div><span class="lb">水質</span></div>
           <div class="wbar"><div class="wbar-fill" id="wBar"></div></div>
-          <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
-          <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
+          <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
+          <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.0.0</div>
+        <div class="sub-info" id="verInfo">v5.0.1</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
-        <div class="sub-info" style="text-align:right" id="jstClock"></div>
+        <div class="sub-info right" id="jstClock"></div>
       </div>
     </div>
     <div id="bottomWrap">
@@ -1698,14 +1697,18 @@ function render(now){
   const shellCount=shells.length;
   const plantPurify=plants.length*0.0016; // 水草の浄化力を2倍に
   const filterBonus=filterOn?0.018:0; // ろ過の効果も少し強化
-  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.005-shellCount*0.002+plantPurify+filterBonus),0,100); // 腐った餌・抜け殻の悪化も半分以下
+  // --- タニシ・ラムズホーンの水質回復効果 ---
+  const snailCount = snails.filter(s=>s.alive).length;
+  const ramsCount = ramses.filter(r=>r.alive).length;
+  const snailPurify = (snailCount + ramsCount) * 0.0022; // 1体あたり毎秒+0.22%
+  wq=clamp(wq+dt*(-bioLoad-rottingFood*0.005-shellCount*0.002+plantPurify+filterBonus+snailPurify),0,100);
   const wBarEl=document.getElementById('wBar');
   wBarEl.style.width=wq+'%';
   wBarEl.parentElement.title='水質: '+Math.round(wq)+'%';
   wBarEl.style.background=wq>50?'linear-gradient(90deg,#2e9cc8,#6ec4e8)':wq>25?'linear-gradient(90deg,#c8962e,#e8c46e)':'linear-gradient(90deg,#c83030,#e86060)';
 
-  for(const s of shrimps)s.update(dt);
 
+  for(const s of shrimps)s.update(dt);
   for(let i=shrimps.length-1;i>=0;i--){
     const s=shrimps[i];
     if(s.alive&&s.hp<=0){s.alive=false;s.dying=true;s.dyingTimer=3;
@@ -1714,6 +1717,65 @@ function render(now){
     if(s.dying&&s.dyingTimer<=0){shrimps.splice(i,1);uiTimer=0;}
   }
   if(!gameOver&&shrimps.length===0){gameOver=true;notify('😢 全てのエビがいなくなりました…\n🛒「エビ追加」ボタンで新しいエビを迎えよう！',120000);}
+
+  // --- タニシ・ラムズホーンの死亡ロジック（きれいすぎる水質） ---
+  if (!window.snailDeathTimer) window.snailDeathTimer = 0;
+  window.snailDeathTimer += dt;
+  if (window.snailDeathTimer > 3.5) { // 3.5秒ごとに判定
+    window.snailDeathTimer = 0;
+    const snailCount = snails.filter(s=>s.alive).length;
+    const ramsCount = ramses.filter(r=>r.alive).length;
+    const totalSnail = snailCount + ramsCount;
+    if (wq > 90 && totalSnail > 4) {
+      // 4体より多い場合のみ死亡
+      let deathList = [];
+      if (snailCount > 0) deathList = deathList.concat(snails.filter(s=>s.alive));
+      if (ramsCount > 0) deathList = deathList.concat(ramses.filter(r=>r.alive));
+      if (deathList.length > 0) {
+        const victim = deathList[randI(0, deathList.length-1)];
+        victim.alive = false;
+        notify('🐚 タニシ/ラムズホーンが餌不足で死にました…', 2500);
+      }
+    }
+  }
+  // --- タニシ・ラムズホーンの繁殖ロジック ---
+  if (!window.snailBreedTimer) window.snailBreedTimer = 0;
+  window.snailBreedTimer += dt;
+  if (window.snailBreedTimer > 2.5) { // 2.5秒ごとに判定
+    window.snailBreedTimer = 0;
+    const snailCount = snails.filter(s=>s.alive).length;
+    const ramsCount = ramses.filter(r=>r.alive).length;
+    const totalSnail = snailCount + ramsCount;
+    if (wq < 40 && totalSnail < 8) {
+      // 4体未満なら高確率、8体未満なら低確率で繁殖
+      let breedChance = totalSnail < 4 ? 0.7 : 0.18;
+      if (Math.random() < breedChance) {
+        // どちらかをランダムで増やす
+        if (Math.random() < 0.5) {
+          snails.push(new Snail(rand(30, W-30), SAND_Y - rand(5, 25)));
+        } else {
+          ramses.push(new RamsHorn(rand(30, W-30), SAND_Y - rand(5, 25)));
+        }
+        notify('🐚 タニシ/ラムズホーンが繁殖しました！', 2500);
+      }
+    }
+  }
+
+  // --- タニシ・ラムズホーンの繁殖・死亡個体数制御 ---
+  // 繁殖時: 8体を超えたら超過分を即座にalive=false
+  let allSnails = snails.filter(s=>s.alive).concat(ramses.filter(r=>r.alive));
+  if (allSnails.length > 8) {
+    for (let i = 8; i < allSnails.length; i++) allSnails[i].alive = false;
+  }
+  // 死亡時: 4体未満にはならないように
+  allSnails = snails.filter(s=>s.alive).concat(ramses.filter(r=>r.alive));
+  if (allSnails.length < 4) {
+    // 死亡直後などで4体未満になった場合、直近で死んだ個体を復活させる
+    let deadSnails = snails.filter(s=>!s.alive).concat(ramses.filter(r=>!r.alive));
+    for (let i = 0; i < 4 - allSnails.length && i < deadSnails.length; i++) {
+      deadSnails[i].alive = true;
+    }
+  }
 
   breedTimer-=dt;
   if(breedTimer<=0){
