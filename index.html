@@ -146,7 +146,7 @@
           <div style="margin-top:4px"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar" style="width:50%"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v4.3.1</div>
+        <div class="sub-info" id="verInfo">v4.3.2</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -933,7 +933,7 @@ class Food{
 // ============================================================
 const shells=[];
 class MoltedShell{
-  constructor(x,y,r){this.x=x;this.y=y;this.alpha=0.55;this.fs=rand(2,5);this.sz=rand(4,7);this.isR=r;this.rot=rand(0,Math.PI*2);this.rs=rand(-0.2,0.2);}
+  constructor(x,y,r){this.x=x;this.y=y;this.alpha=19.2;this.fs=rand(2,5);this.sz=rand(4,7);this.isR=r;this.rot=rand(0,Math.PI*2);this.rs=rand(-0.2,0.2);}
   update(dt){this.y-=this.fs*dt;this.x+=Math.sin(time*0.6+this.rot)*1.5*dt;this.rot+=this.rs*dt;this.alpha-=dt*0.04;}
   draw(ctx){
     if(this.alpha<=0)return;
@@ -958,7 +958,7 @@ class Shrimp{
     this.depth=0;this.baseDepth=0;this.uiId=null;
     this.state=ST.TSUMA;this.st=0;this.sd=rand(3,8);
     this.facing=1;this.lp=0;this.bw=0;
-    this.tr=0;this.mt=rand(60,120);
+    this.tr=0;this.mt=rand(300,600); // 脱皮タイマーを5～10分に
     this.speed=18;this.ap=rand(0,Math.PI*2);
     this.tp=0;this.jm=false;
     this.sb=0;this.bp=rand(0,Math.PI*2);
@@ -1025,7 +1025,7 @@ class Shrimp{
     this.depth=clamp(this.baseDepth+Math.sin(time*0.12+this.bp)*0.06,0,1);
     this.mt-=dt;
     if(this.sb>0)this.sb-=dt*3;
-    if(this.mt<=0){this.molt();this.mt=rand(90,180);}
+    if(this.mt<=0){this.molt();this.mt=rand(300,600);} // 脱皮タイマーを5～10分に
     if(this.st>=this.sd)this.pickNewState();
 
     switch(this.state){
@@ -1846,7 +1846,7 @@ let autoSaveTimer=0;
 
 function buildSaveData(){
   return {
-    version:'4.3.1',
+    version:'4.3.2',
     savedAt:Date.now(),
     wq:wq,
     waterTemp:waterTemp,
