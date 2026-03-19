@@ -146,7 +146,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.0.6</div>
+        <div class="sub-info" id="verInfo">v5.1.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1311,7 +1311,17 @@ class Shrimp{
     const count=randI(2,4);
     for(let i=0;i<count;i++){
       if(shrimps.filter(s=>s.alive).length>=12)break;
-      const baby=(this instanceof BeeShrimp)?new BeeShrimp():new ClearShrimp();
+      let baby;
+      if(this instanceof BeeShrimp){
+        baby = new BeeShrimp();
+      }else if(this instanceof ClearShrimp){
+        baby = new ClearShrimp();
+      }else if(this instanceof BlackWhiteShrimp){
+        baby = new BlackWhiteShrimp();
+      }else{
+        // 万一の保険
+        baby = new BeeShrimp();
+      }
       baby.x=clamp(this.x+rand(-15,15),30,W-30);
       baby.y=clamp(this.y+rand(-5,5),60,SAND_Y);
       baby.babyScale=0.35;baby.baseDepth=rand(0,1);baby.depth=baby.baseDepth;
@@ -1431,14 +1441,126 @@ class BeeShrimp extends Shrimp{
     // SICK indicator
     if(this.sick){ctx.globalAlpha=0.5+Math.sin(time*3)*0.2;ctx.fillStyle='rgba(180,120,220,0.6)';
       ctx.beginPath();ctx.arc(0,-12,2,0,Math.PI*2);ctx.fill();}
-    // ANTENNAE
-    this.drawAnt(ctx,22,-3+a8,1);
+    // ANTENNAE（黒色）
+    ctx.save();
+    ctx.strokeStyle = 'rgba(40,40,40,0.5)';
+    ctx.lineWidth = 0.8;
+    // 1本目
+    ctx.beginPath();
+    ctx.moveTo(22,-3+a8);
+    ctx.bezierCurveTo(36,-13+a8,44,-18+a8,62,-22+a8);
+    ctx.stroke();
+    // 2本目
+    ctx.beginPath();
+    ctx.moveTo(21,-2+a8);
+    ctx.bezierCurveTo(35,-7+a8,42,-10+a8,58,-12+a8);
+    ctx.stroke();
+    ctx.restore();
     // TSUMATUMA
     if(this.jm){const co=Math.sin(this.tp)*1.8;
       ctx.strokeStyle='rgba(200,130,110,0.5)';ctx.lineWidth=0.8;
       ctx.beginPath();ctx.moveTo(20,.5+a8);ctx.lineTo(23+tO,-1-co+a8);ctx.stroke();
       ctx.beginPath();ctx.moveTo(20,1.5+a8);ctx.lineTo(23+tO,3+co+a8);ctx.stroke();
       ctx.fillStyle='rgba(200,130,110,0.4)';ctx.beginPath();ctx.arc(23+tO,-1-co+a8,.7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(23+tO,3+co+a8,.7,0,Math.PI*2);ctx.fill();}
+    // LIGHT
+    ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.04+Math.sin(time*.5)*.015;
+    const eG=ctx.createLinearGradient(-24,0,22,0);eG.addColorStop(0,'rgba(150,220,255,0)');eG.addColorStop(.4,'rgba(150,220,255,1)');eG.addColorStop(.7,'rgba(150,220,255,.5)');eG.addColorStop(1,'rgba(150,220,255,0)');
+    ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+  }
+}
+
+// ============================================================
+//  BLACK WHITE SHRIMP — 黒白縞エビ
+// ============================================================
+class BlackWhiteShrimp extends Shrimp{
+  constructor(){super(rand(W*0.2,W*0.8),rand(SAND_Y-45,SAND_Y-8));this.speed=15;}
+  pickNewState(){
+    const r=Math.random();
+    if(foods.some(f=>!f.eaten&&f.settled)){this.state=ST.EAT;this.sd=rand(5,10);}
+    else if(r<0.35){this.state=ST.TSUMA;this.sd=rand(4,9);}
+    else if(r<0.50){this.state=ST.WALK;this.pickWT();this.sd=rand(3,7);}
+    else if(r<0.56){this.state=ST.IDLE;this.sd=rand(2,5);}
+    else if(r<0.78){this.state=ST.SWIM;this.pickSwimT();this.sd=rand(5,12);}
+    else{this.state=ST.FLOAT;this.pickFloatT();this.sd=rand(6,15);}
+    this.st=0;if(this.uiId)document.getElementById(this.uiId).textContent='黒白縞';
+  }
+  draw(ctx){
+    const dsc=lerp(1,0.62,this.depth)*this.babyScale;
+    ctx.save();ctx.translate(this.x,this.y);ctx.scale(this.facing*dsc,dsc);
+    ctx.globalAlpha=lerp(1,0.5,this.depth)*(1-this.tr*0.3);
+    if(this.dying){ctx.globalAlpha*=Math.max(0,this.dyingTimer/3);ctx.rotate((1-this.dyingTimer/3)*Math.PI*0.5);}
+    const w=this.bw,br=Math.sin(this.bp)*0.3,tO=this.jm?Math.sin(this.tp)*0.6:0;
+    const ay=(t)=>Math.sin(w+t*2.5)*0.5*(1-t)+br*t;
+    const a0=ay(0),a1=ay(.12),a2=ay(.25),a3=ay(.38),a4=ay(.5),a5=ay(.62),a6=ay(.75),a7=ay(.88),a8=ay(1);
+    const bodyPath=()=>{
+      ctx.beginPath();ctx.moveTo(-22,2+a0);
+      ctx.bezierCurveTo(-20,.5+a0,-18,-1+a1,-16,-2.5+a1);
+      ctx.bezierCurveTo(-14,-3.8+a2,-12,-5+a2,-10,-5.8+a3);
+      ctx.bezierCurveTo(-8,-6.5+a3,-5,-7.2+a3,-2,-7.8+a4);
+      ctx.bezierCurveTo(0,-8.2+a4,2,-8.5+a5,4,-8.8+a5);
+      ctx.bezierCurveTo(6,-9.2+a5,9,-9.5+a6,12,-9.2+a6);
+      ctx.bezierCurveTo(14,-8.8+a7,16,-7.8+a7,18,-6+a7);
+      ctx.bezierCurveTo(19,-5+a8,20,-4+a8,21,-3+a8);
+      ctx.lineTo(21,2+a8);
+      ctx.bezierCurveTo(20,3.5+a8,18,5+a7,16,5.5+a7);
+      ctx.bezierCurveTo(14,6+a7,12,6.5+a6,9,7+a6);
+      ctx.bezierCurveTo(6,7+a5,3,7+a5,0,6.5+a4);
+      ctx.bezierCurveTo(-3,6+a4,-6,5.5+a3,-9,5+a3);
+      ctx.bezierCurveTo(-12,4.5+a2,-15,4+a2,-18,3.5+a1);
+      ctx.bezierCurveTo(-20,3.2+a1,-21,3+a0,-22,3+a0);
+      ctx.closePath();
+    };
+    this.drawShadow(ctx,48);
+    // TAIL FAN（黒）
+    const tBx=-22,tBy=2.5+a0,fl=this.sb>0?Math.sin(time*18)*3:0;
+    ctx.fillStyle='rgba(40,40,40,0.55)';ctx.beginPath();ctx.moveTo(tBx,tBy-1);ctx.quadraticCurveTo(tBx-7,tBy-5+fl*.3,tBx-13,tBy-3+fl*.5);ctx.quadraticCurveTo(tBx-8,tBy-.5,tBx,tBy);ctx.fill();
+    ctx.fillStyle='rgba(60,60,60,0.65)';ctx.beginPath();ctx.moveTo(tBx,tBy-.5);ctx.quadraticCurveTo(tBx-9,tBy,tBx-14,tBy+.5);ctx.quadraticCurveTo(tBx-9,tBy+1.5,tBx,tBy+1);ctx.fill();
+    ctx.fillStyle='rgba(40,40,40,0.5)';ctx.beginPath();ctx.moveTo(tBx,tBy+.5);ctx.quadraticCurveTo(tBx-7,tBy+5-fl*.3,tBx-12,tBy+5-fl*.5);ctx.quadraticCurveTo(tBx-7,tBy+3,tBx,tBy+1.5);ctx.fill();
+    ctx.strokeStyle='rgba(200,200,200,0.08)';ctx.lineWidth=0.3;
+    for(let i=0;i<5;i++){const ag=-0.6+i*0.3;ctx.beginPath();ctx.moveTo(tBx-11+Math.abs(i-2),tBy+Math.sin(ag)*3);ctx.lineTo(tBx-15+Math.abs(i-2)*.5,tBy+Math.sin(ag)*5.5);ctx.stroke();}
+    // BODY（黒白縞）
+    bodyPath();ctx.fillStyle='#222';ctx.fill();
+    ctx.save();bodyPath();ctx.clip();
+    for(const[x1,x2]of[[-23,-16],[-9,-3],[3,9],[17,22]]){ctx.fillStyle='#fff';ctx.fillRect(x1,-14,x2-x1,28);}
+    const hlG=ctx.createLinearGradient(0,-10,0,8);
+    hlG.addColorStop(0,'rgba(255,255,255,0.18)');hlG.addColorStop(0.35,'rgba(200,200,200,0.08)');hlG.addColorStop(0.7,'rgba(0,0,0,0)');hlG.addColorStop(1,'rgba(0,0,0,0.1)');
+    ctx.fillStyle=hlG;ctx.fillRect(-24,-14,50,28);ctx.restore();
+    bodyPath();ctx.strokeStyle='rgba(40,40,40,0.12)';ctx.lineWidth=0.6;ctx.stroke();
+    // SEGMENT LINES
+    ctx.strokeStyle='rgba(0,0,0,0.13)';ctx.lineWidth=0.5;
+    for(const sx of[-18,-14,-10,-6,-2,2]){const t=(sx+22)/44,aO=ay(t);ctx.beginPath();ctx.moveTo(sx,lerp(0,-8.5,Math.min(t*1.3,1))+aO);ctx.lineTo(sx+.3,lerp(3.5,7,Math.min(t*1.1,1))+aO);ctx.stroke();}
+    ctx.strokeStyle='rgba(0,0,0,0.19)';ctx.lineWidth=0.6;ctx.beginPath();ctx.moveTo(5,-8.8+a5);ctx.lineTo(5.3,7+a5);ctx.stroke();
+    // PLEOPODS
+    ctx.lineWidth=0.5;
+    for(let i=0;i<5;i++){const lx=-16+i*4.5,t2=(lx+22)/44,aO=ay(t2),baseY2=lerp(3.5,6.5,Math.min(t2*1.1,1))+aO,sw=Math.sin(this.lp+i*1.1)*2;
+      ctx.strokeStyle='rgba(80,80,80,0.25)';ctx.beginPath();ctx.moveTo(lx,baseY2);ctx.quadraticCurveTo(lx+sw*.5,baseY2+3,lx+sw,baseY2+5.5);ctx.stroke();
+      ctx.strokeStyle='rgba(120,120,120,0.12)';ctx.beginPath();ctx.moveTo(lx+sw,baseY2+5.5);ctx.lineTo(lx+sw+.8,baseY2+6.5);ctx.stroke();ctx.beginPath();ctx.moveTo(lx+sw,baseY2+5.5);ctx.lineTo(lx+sw-.8,baseY2+6.5);ctx.stroke();}
+    // PEREIOPODS
+    ctx.strokeStyle='rgba(120,120,120,0.4)';ctx.lineWidth=0.6;
+    for(let i=0;i<5;i++){const lx=7+i*2.8,aO=ay(.65+i*.05),baseY2=6+aO,sw=Math.sin(this.lp*1.2+i*1.3)*2;
+      ctx.beginPath();ctx.moveTo(lx,baseY2);ctx.lineTo(lx+sw*.3,baseY2+4);ctx.lineTo(lx+sw,baseY2+7.5);ctx.stroke();}
+    // EGGS (if carrying)
+    if(this.eggs){ctx.fillStyle='rgba(220,220,60,0.7)';
+      for(let i=0;i<6;i++){const ex=-10+i*4,ey=6.5+ay((ex+22)/44)+Math.sin(time*2+i)*0.3;
+        ctx.beginPath();ctx.arc(ex,ey,1.4,0,Math.PI*2);ctx.fill();}}
+    // ROSTRUM
+    ctx.fillStyle='#222';ctx.beginPath();ctx.moveTo(21,-3.5+a8);ctx.lineTo(26+tO,-5+a8);ctx.lineTo(21,-2+a8);ctx.closePath();ctx.fill();
+    // EYE
+    const eyeX=19.5,eyeY=-4.5+a8;
+    ctx.fillStyle='rgba(60,60,60,0.4)';ctx.beginPath();ctx.ellipse(eyeX,eyeY+1.2,1.2,1.8,0.15,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(eyeX+.3,eyeY,1.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.7)';ctx.beginPath();ctx.arc(eyeX+.8,eyeY-.5,.45,0,Math.PI*2);ctx.fill();
+    // SICK indicator
+    if(this.sick){ctx.globalAlpha=0.5+Math.sin(time*3)*0.2;ctx.fillStyle='rgba(120,120,220,0.6)';
+      ctx.beginPath();ctx.arc(0,-12,2,0,Math.PI*2);ctx.fill();}
+    // ANTENNAE
+    this.drawAnt(ctx,22,-3+a8,1);
+    // TSUMATUMA
+    if(this.jm){const co=Math.sin(this.tp)*1.8;
+      ctx.strokeStyle='rgba(120,120,120,0.5)';ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.moveTo(20,.5+a8);ctx.lineTo(23+tO,-1-co+a8);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(20,1.5+a8);ctx.lineTo(23+tO,3+co+a8);ctx.stroke();
+      ctx.fillStyle='rgba(120,120,120,0.4)';ctx.beginPath();ctx.arc(23+tO,-1-co+a8,.7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(23+tO,3+co+a8,.7,0,Math.PI*2);ctx.fill();}
     // LIGHT
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.04+Math.sin(time*.5)*.015;
     const eG=ctx.createLinearGradient(-24,0,22,0);eG.addColorStop(0,'rgba(150,220,255,0)');eG.addColorStop(.4,'rgba(150,220,255,1)');eG.addColorStop(.7,'rgba(150,220,255,.5)');eG.addColorStop(1,'rgba(150,220,255,0)');
@@ -1537,9 +1659,11 @@ class ClearShrimp extends Shrimp{
 //  CREATE
 // ============================================================
 const shrimps=[];
-const _depths=[0.08,0.48,0.88,0.28,0.68];
+const _depths=[0.08,0.48,0.88,0.28,0.68,0.58];
 for(let i=0;i<3;i++){const s=new BeeShrimp();s.baseDepth=_depths[i];s.depth=_depths[i];s.x=rand(W*0.15+i*W*0.2,W*0.25+i*W*0.2);shrimps.push(s);}
 for(let i=0;i<2;i++){const s=new ClearShrimp();s.baseDepth=_depths[3+i];s.depth=_depths[3+i];s.x=rand(W*0.3+i*W*0.3,W*0.5+i*W*0.3);shrimps.push(s);}
+// 黒白縞エビを1匹追加
+const s=new BlackWhiteShrimp();s.baseDepth=_depths[5];s.depth=_depths[5];s.x=rand(W*0.2,W*0.8);shrimps.push(s);
 for(const s of shrimps)s.pickNewState();
 shrimpsReady=true;
 
@@ -1560,15 +1684,20 @@ function shrimpStatusText(s){
 }
 function updateShrimpUI(){
   const panel=document.getElementById('shrimpInfo');
-  let bN=0,cN=0,html='';
+  let bN=0,cN=0,bcN=0,html='';
   const vis=shrimps.filter(s=>s.alive||s.dying);
   html+='<div style="margin-bottom:2px"><span class="lb">匹数：</span><span class="v">'+vis.length+'匹</span></div>';
   if(algaeLevel>30)html+='<div style="margin-bottom:2px"><span class="lb">コケ：</span><span class="v" style="color:'+(algaeLevel>60?'#e8c44a':'#6ec8a0')+'">'+Math.round(algaeLevel)+'%</span></div>';
   for(const s of shrimps){
     if(!s.alive&&!s.dying)continue;
     let nm;
-    if(s instanceof BeeShrimp){nm='ビー'+CIRC[bN];bN++;}
-    else{nm='透明'+CIRC[cN];cN++;}
+    if(s instanceof BeeShrimp){
+      nm='ビー'+CIRC[bN]; bN++;
+    }else if(s instanceof BlackWhiteShrimp){
+      nm='白黒'+CIRC[bcN]; bcN++;
+    }else{
+      nm='透明'+CIRC[cN]; cN++;
+    }
     const st=shrimpStatusText(s);
     const hpP=Math.max(0,Math.round(s.hp));
     const hunP=Math.max(0,Math.round(s.hunger));
@@ -1945,13 +2074,23 @@ document.getElementById('feedSelBtn').addEventListener('click',()=>{
 document.getElementById('shopBtn').addEventListener('click',()=>{
   const alive=shrimps.filter(s=>s.alive).length;
   if(alive>=12){notify('⚠️ 水槽が満員です（最大12匹）',3000);return;}
-  const type=Math.random()<0.5?'bee':'clear';
-  const s=type==='bee'?new BeeShrimp():new ClearShrimp();
+  // 3種均等にランダム
+  const r = Math.random();
+  let s, name;
+  if(r < 1/3){
+    s = new BeeShrimp();
+    name = 'ビーシュリンプ';
+  }else if(r < 2/3){
+    s = new ClearShrimp();
+    name = 'クリアシュリンプ';
+  }else{
+    s = new BlackWhiteShrimp();
+    name = '黒白縞シュリンプ';
+  }
   s.baseDepth=Math.random();s.depth=s.baseDepth;
   s.x=rand(W*0.15,W*0.85);
   shrimps.push(s);s.pickNewState();
   if(gameOver){gameOver=false;}
-  const name=type==='bee'?'ビーシュリンプ':'クリアシュリンプ';
   notify('🦐 '+name+'をお迎えしました！',3000);
   uiTimer=0;
 });
