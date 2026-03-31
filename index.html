@@ -2306,7 +2306,7 @@ document.getElementById('shopBtn').addEventListener('click',()=>{
 });
 document.getElementById('fishBtn').addEventListener('click',()=>{
   const aliveF=fishes.filter(f=>f.alive).length;
-  if(aliveF>=10){notify('⚠️ 魚が多すぎます（最大10匹）',3000);return;}
+  if(aliveF>=5){notify('⚠️ 魚が多すぎます（最大5匹）',3000);return;}
   const types=['neon','guppy','rasbora'];
   const type=types[randI(0,2)];
   const f=new TropicalFish(type,rand(W*0.15,W*0.85),rand(H*0.12,H*0.5));
