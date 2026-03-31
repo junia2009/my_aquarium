@@ -585,7 +585,6 @@ let W=400,H=780,SAND_Y=620;
 const snails = [new Snail(80, SAND_Y - 5), new Snail(200, SAND_Y - 5)];
 const ramses = [new RamsHorn(300, SAND_Y - 5), new RamsHorn(400, SAND_Y - 5)];
 const fishes = [];
-for(let i=0;i<3;i++){const f=new TropicalFish('neon',rand(50,W-50),rand(H*0.15,H*0.5));f.pickNewState();fishes.push(f);}
 
 function resizeCanvas(){
   const wrap=document.getElementById('wrap');
@@ -1871,6 +1870,8 @@ for(let i=0;i<2;i++){const s=new ClearShrimp();s.baseDepth=_depths[3+i];s.depth=
 const s=new BlackWhiteShrimp();s.baseDepth=_depths[5];s.depth=_depths[5];s.x=rand(W*0.2,W*0.8);shrimps.push(s);
 for(const s of shrimps)s.pickNewState();
 shrimpsReady=true;
+// 初期熱帯魚（ネオンテトラ3匹）
+for(let i=0;i<3;i++){const f=new TropicalFish('neon',rand(50,W-50),rand(H*0.15,H*0.5));f.pickNewState();fishes.push(f);}
 
 // Initialize shelters (driftwood / rock hideouts)
 for(let i=0;i<2;i++){
