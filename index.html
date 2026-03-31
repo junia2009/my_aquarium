@@ -163,7 +163,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.6</div>
+        <div class="sub-info" id="verInfo">v5.2.7</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1412,6 +1412,10 @@ class Shrimp{
     this.female=Math.random()<0.5;
     this.eggs=false;this.eggTimer=0;
     this.sick=false;this.sickTimer=0;
+    // 寿命: 90〜150分（5400〜9000秒）、水質・水温が良いほど長生き補正あり
+    this.lifespan=rand(5400,9000);
+    this.age=0;
+    this._agedNotified=false;
   }
   pickWT(){
     this.tx=clamp(this.x+rand(-80,80),30,W-30);
@@ -1428,6 +1432,20 @@ class Shrimp{
   update(dt){
     if(this.dying){this.dyingTimer-=dt;this.y-=2*dt;this.x+=Math.sin(time*0.8)*0.3;return;}
     if(!this.alive)return;
+    // ── 寿命 ──
+    this.age+=dt;
+    // 老齢通知（寿命80%到達時、一度だけ）
+    if(!this._agedNotified&&this.age>this.lifespan*0.8){
+      this._agedNotified=true;
+      const nm=this instanceof BeeShrimp?'ビー':(this instanceof BlackWhiteShrimp?'白黒':'透明');
+      notify('👴 '+nm+'エビが老いてきました…',4000);
+    }
+    // 老衰死（寿命超過）
+    if(this.age>=this.lifespan){this.hp=0;}
+    // 老齢期はHPが自然に少しずつ低下
+    if(this.age>this.lifespan*0.7){
+      this.hp=Math.max(0,this.hp-0.003*(this.age/this.lifespan)*dt);
+    }
     this.hunger=Math.max(0,this.hunger-0.015*dt);
     if(this.hunger<20)this.hp=Math.max(0,this.hp-0.008*dt);
     if(wq<20)this.hp=Math.max(0,this.hp-0.003*dt); // 水質悪化時のHP減少も半分以下
@@ -1689,7 +1707,10 @@ class BeeShrimp extends Shrimp{
     // LIGHT
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.04+Math.sin(time*.5)*.015;
     const eG=ctx.createLinearGradient(-24,0,22,0);eG.addColorStop(0,'rgba(150,220,255,0)');eG.addColorStop(.4,'rgba(150,220,255,1)');eG.addColorStop(.7,'rgba(150,220,255,.5)');eG.addColorStop(1,'rgba(150,220,255,0)');
-    ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+    ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);
+    // AGING OVERLAY
+    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='rgba(220,220,220,1)';ctx.fillRect(-28,-14,56,28);}
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
   }
 }
 
@@ -1788,7 +1809,10 @@ class BlackWhiteShrimp extends Shrimp{
     // LIGHT
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.04+Math.sin(time*.5)*.015;
     const eG=ctx.createLinearGradient(-24,0,22,0);eG.addColorStop(0,'rgba(150,220,255,0)');eG.addColorStop(.4,'rgba(150,220,255,1)');eG.addColorStop(.7,'rgba(150,220,255,.5)');eG.addColorStop(1,'rgba(150,220,255,0)');
-    ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+    ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);
+    // AGING OVERLAY
+    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='rgba(220,220,220,1)';ctx.fillRect(-28,-14,56,28);}
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
   }
 }
 
@@ -1875,6 +1899,8 @@ class ClearShrimp extends Shrimp{
       ctx.beginPath();ctx.moveTo(20,.5+a8);ctx.lineTo(22+tO,-.5-co+a8);ctx.stroke();ctx.beginPath();ctx.moveTo(20,1.5+a8);ctx.lineTo(22+tO,2+co+a8);ctx.stroke();}
     // LIGHT
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=.025;ctx.fillStyle='rgba(150,220,255,1)';ctx.fillRect(-24,-10,48,4);
+    // AGING OVERLAY
+    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='rgba(220,220,220,1)';ctx.fillRect(-28,-14,56,28);}
     ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
   }
 }
@@ -2559,7 +2585,8 @@ function buildSaveData(){
       eggs:s.eggs,eggTimer:s.eggTimer,
       sick:s.sick,sickTimer:s.sickTimer,
       mt:s.mt,tr:s.tr,
-      facing:s.facing,state:s.state
+      facing:s.facing,state:s.state,
+      age:s.age,lifespan:s.lifespan
     })),
     shelters:shelters.map(sh=>({x:sh.x,y:sh.y,w:sh.w,h:sh.h})),
     fishes:fishes.filter(f=>f.alive).map(f=>({fishType:f.fishType,x:f.x,y:f.y,facing:f.facing,tailHue:f.tailHue,bodyHue:f.bodyHue}))
@@ -2603,6 +2630,9 @@ function applySaveData(data){
       s.mt=sd.mt||rand(60,120);s.tr=sd.tr||0;
       s.facing=sd.facing||1;s.state=sd.state||0;
       s.st=0;s.sd=rand(3,8);
+      s.age=sd.age||0;
+      s.lifespan=sd.lifespan||rand(5400,9000);
+      s._agedNotified=s.age>s.lifespan*0.8;
       shrimps.push(s);
     }
   }
