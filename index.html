@@ -53,7 +53,10 @@
   }
   .panel .lb{color:rgba(130,180,225,0.55);font-size:10px;letter-spacing:0.03em}
   .panel .v{font-weight:600}
-  #shrimpInfo{text-align:right}
+  #shrimpInfo{text-align:right;cursor:pointer;-webkit-tap-highlight-color:transparent;max-height:none;transition:max-height .3s ease}
+  #shrimpInfo .detail{display:none}
+  #shrimpInfo.expanded .detail{display:block}
+  #shrimpInfo .toggle-hint{font-size:9px;color:rgba(130,180,225,0.4);margin-top:2px}
   .wbar{width:110px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-top:4px;overflow:hidden;cursor:default}
   .wbar-fill{width:100%;height:100%;background:linear-gradient(90deg,#2e9cc8,#6ec4e8);border-radius:3px;transition:width .8s ease}
   .stat-row{display:flex;align-items:center;gap:4px;margin-top:2px}
@@ -160,7 +163,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.5</div>
+        <div class="sub-info" id="verInfo">v5.2.6</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1907,11 +1910,26 @@ function shrimpStatusText(s){
 }
 function updateShrimpUI(){
   const panel=document.getElementById('shrimpInfo');
+  const isExpanded=panel.classList.contains('expanded');
   let bN=0,cN=0,bcN=0,html='';
   const vis=shrimps.filter(s=>s.alive||s.dying);
   const aliveFish=fishes.filter(f=>f.alive).length;
+  // --- Summary (always visible) ---
+  const sickN=vis.filter(s=>s.sick).length;
+  const hungryN=vis.filter(s=>s.hunger<20).length;
+  const weakN=vis.filter(s=>s.hp<30&&!s.dying).length;
+  const eggN=vis.filter(s=>s.eggs).length;
   html+='<div style="margin-bottom:2px"><span class="lb">匹数：</span><span class="v">'+vis.length+'匹</span>'+(aliveFish>0?' <span class="lb">🐟</span><span class="v">'+aliveFish+'</span>':'')+'</div>';
+  // Alerts
+  let alerts=[];
+  if(sickN>0)alerts.push('🤒'+sickN+'匹病気');
+  if(weakN>0)alerts.push('😰'+weakN+'匹弱ってる');
+  if(hungryN>0)alerts.push('😣'+hungryN+'匹空腹');
+  if(eggN>0)alerts.push('🥚'+eggN+'匹抱卵');
+  if(alerts.length>0)html+='<div style="margin-bottom:2px;font-size:11px">'+alerts.join(' ')+'</div>';
   if(algaeLevel>30)html+='<div style="margin-bottom:2px"><span class="lb">コケ：</span><span class="v" style="color:'+(algaeLevel>60?'#e8c44a':'#6ec8a0')+'">'+Math.round(algaeLevel)+'%</span></div>';
+  // --- Detail (toggled) ---
+  html+='<div class="detail">';
   for(const s of shrimps){
     if(!s.alive&&!s.dying)continue;
     let nm;
@@ -1931,9 +1949,13 @@ function updateShrimpUI(){
       +'<div class="stat-row"><span class="stat-lb">HP</span><div class="minibar" title="HP: '+hpP+'%"><div class="minibar-fill" style="width:'+hpP+'%;background:'+hpC+'"></div></div>'
       +'<span class="stat-lb">餌</span><div class="minibar" title="満腹度: '+hunP+'%"><div class="minibar-fill" style="width:'+hunP+'%;background:'+hunC+'"></div></div></div></div>';
   }
+  html+='</div>';
   if(vis.length===0)html+='<div><span class="v" style="color:#e85050">エビがいません</span></div>';
+  html+='<div class="toggle-hint">'+(isExpanded?'▲ たたむ':'▼ 詳細')+'</div>';
   panel.innerHTML=html;
 }
+// Toggle panel expand
+document.getElementById('shrimpInfo').addEventListener('click',function(){this.classList.toggle('expanded');uiTimer=0;});
 updateShrimpUI();
 
 // ============================================================
