@@ -74,33 +74,44 @@
     color:rgba(195,225,255,0.7);font-size:16px;
     transition:all .25s ease;
     -webkit-tap-highlight-color:transparent;
-    margin-bottom:-1px;
+    margin-bottom:calc(max(env(safe-area-inset-bottom,8px),8px));
   }
   #toggleBarBtn:active{background:rgba(20,50,90,0.5)}
-  #bottomBar{
-    padding:6px 10px calc(max(env(safe-area-inset-bottom,16px),16px) + 4px);
-    padding-bottom:calc(max(env(safe-area-inset-bottom,16px),16px) + 4px);
-    display:flex;gap:6px;
-    flex-wrap:nowrap;
-    overflow-x:auto;-webkit-overflow-scrolling:touch;
-    touch-action:pan-x;
-    pointer-events:auto;
-    z-index:10;
-    transition:max-height .35s ease,opacity .3s ease,padding .35s ease;
+  #menuOverlay{
+    position:absolute;top:0;left:0;right:0;bottom:0;
+    background:rgba(2,8,18,0.7);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    z-index:20;pointer-events:auto;
+    opacity:0;visibility:hidden;
+    transition:opacity .25s ease,visibility .25s ease;
   }
-  #bottomBar.hidden{
-    max-height:0;opacity:0;padding-top:0;padding-bottom:0;overflow:hidden;
-    pointer-events:none;
+  #menuOverlay.show{opacity:1;visibility:visible}
+  #menuGrid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;padding:20px;
+    max-width:380px;width:90%;
+  }
+  #menuClose{
+    position:absolute;top:max(env(safe-area-inset-top,14px),14px);right:14px;
+    background:rgba(6,16,32,0.65);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid rgba(90,170,255,0.12);
+    border-radius:50%;width:40px;height:40px;
+    color:rgba(195,225,255,0.9);font-size:20px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;
   }
   .btn{
     background:rgba(6,16,32,0.65);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
     border:1px solid rgba(90,170,255,0.12);
     border-radius:12px;
-    padding:10px 14px;
+    padding:12px 8px;
     color:rgba(195,225,255,0.92);
     font-size:13px;
-    white-space:nowrap;flex-shrink:0;
+    white-space:nowrap;
     cursor:pointer;
     transition:all .25s ease;
     display:flex;align-items:center;gap:6px;
@@ -149,7 +160,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.4</div>
+        <div class="sub-info" id="verInfo">v5.2.5</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -158,19 +169,22 @@
     </div>
     <div id="bottomWrap">
       <div id="toggleBarBtn">▲ メニュー</div>
-      <div id="bottomBar">
-        <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
-        <button class="btn" id="feedSelBtn"><span class="ic">🥬</span>野菜</button>
-        <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
-        <button class="btn" id="heaterBtn"><span class="ic">🌡️</span><span id="heaterLbl">ヒーター</span></button>
-        <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
-        <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
-        <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
-        <button class="btn" id="shopBtn"><span class="ic">🛒</span>エビ追加</button>
-        <button class="btn" id="fishBtn"><span class="ic">🐟</span>魚追加</button>
-        <button class="btn" id="saveBtn"><span class="ic">💾</span>セーブ</button>
-        <button class="btn" id="loadBtn"><span class="ic">📂</span>ロード</button>
-      </div>
+    </div>
+  </div>
+  <div id="menuOverlay">
+    <div id="menuClose">✕</div>
+    <div id="menuGrid">
+      <button class="btn" id="feedBtn"><span class="ic">🍤</span>餌</button>
+      <button class="btn" id="feedSelBtn"><span class="ic">🥬</span>野菜</button>
+      <button class="btn" id="cleanBtn"><span class="ic">💧</span>水換え</button>
+      <button class="btn" id="heaterBtn"><span class="ic">🌡️</span><span id="heaterLbl">ヒーター</span></button>
+      <button class="btn" id="filterBtn"><span class="ic">⚙️</span><span id="filterLbl">ろ過OFF</span></button>
+      <button class="btn" id="lightBtn"><span class="ic">💡</span><span id="lightLbl">照明AUTO</span></button>
+      <button class="btn" id="bgmBtn"><span class="ic">🔇</span><span id="bgmLbl">BGM</span></button>
+      <button class="btn" id="shopBtn"><span class="ic">🛒</span>エビ追加</button>
+      <button class="btn" id="fishBtn"><span class="ic">🐟</span>魚追加</button>
+      <button class="btn" id="saveBtn"><span class="ic">💾</span>セーブ</button>
+      <button class="btn" id="loadBtn"><span class="ic">📂</span>ロード</button>
     </div>
   </div>
   <div id="notif"></div>
@@ -2249,13 +2263,15 @@ function render(now){
 // ============================================================
 //  INPUT (touch + mouse)
 // ============================================================
-// Toggle menu bar
-document.getElementById('toggleBarBtn').addEventListener('click',()=>{
-  const bar=document.getElementById('bottomBar');
-  const btn=document.getElementById('toggleBarBtn');
-  bar.classList.toggle('hidden');
-  btn.textContent=bar.classList.contains('hidden')?'▼ メニュー':'▲ メニュー';
-});
+// Menu overlay open/close
+const _overlay=document.getElementById('menuOverlay');
+function openMenu(){_overlay.classList.add('show');}
+function closeMenu(){_overlay.classList.remove('show');}
+document.getElementById('toggleBarBtn').addEventListener('click',openMenu);
+document.getElementById('menuClose').addEventListener('click',closeMenu);
+_overlay.addEventListener('click',(e)=>{if(e.target===_overlay)closeMenu();});
+// Auto-close menu when any .btn inside is clicked
+document.querySelectorAll('#menuGrid .btn').forEach(b=>b.addEventListener('click',()=>setTimeout(closeMenu,150)));
 
 let lastFeedTime=0;
 document.getElementById('feedBtn').addEventListener('click',()=>{
