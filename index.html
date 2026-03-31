@@ -163,7 +163,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.9</div>
+        <div class="sub-info" id="verInfo">v5.3.0</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -2327,8 +2327,7 @@ function closeMenu(){_overlay.classList.remove('show');}
 document.getElementById('toggleBarBtn').addEventListener('click',openMenu);
 document.getElementById('menuClose').addEventListener('click',closeMenu);
 _overlay.addEventListener('click',(e)=>{if(e.target===_overlay)closeMenu();});
-// Auto-close menu when any .btn inside is clicked
-document.querySelectorAll('#menuGrid .btn').forEach(b=>b.addEventListener('click',()=>setTimeout(closeMenu,150)));
+
 
 let lastFeedTime=0;
 document.getElementById('feedBtn').addEventListener('click',()=>{
