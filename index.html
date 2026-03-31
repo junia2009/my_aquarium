@@ -78,16 +78,18 @@
   }
   #toggleBarBtn:active{background:rgba(20,50,90,0.5)}
   #bottomBar{
-    padding:0 10px calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
-    padding-bottom:calc(max(env(safe-area-inset-bottom,16px),16px) + 8px);
-    display:flex;gap:7px;justify-content:center;flex-wrap:wrap;
+    padding:6px 10px calc(max(env(safe-area-inset-bottom,16px),16px) + 4px);
+    padding-bottom:calc(max(env(safe-area-inset-bottom,16px),16px) + 4px);
+    display:flex;gap:6px;
+    flex-wrap:nowrap;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    touch-action:pan-x;
     pointer-events:auto;
     z-index:10;
-    max-height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
     transition:max-height .35s ease,opacity .3s ease,padding .35s ease;
   }
   #bottomBar.hidden{
-    max-height:0;opacity:0;padding-top:0;padding-bottom:0;
+    max-height:0;opacity:0;padding-top:0;padding-bottom:0;overflow:hidden;
     pointer-events:none;
   }
   .btn{
@@ -98,6 +100,7 @@
     padding:10px 14px;
     color:rgba(195,225,255,0.92);
     font-size:13px;
+    white-space:nowrap;flex-shrink:0;
     cursor:pointer;
     transition:all .25s ease;
     display:flex;align-items:center;gap:6px;
@@ -146,7 +149,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.3</div>
+        <div class="sub-info" id="verInfo">v5.2.4</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
