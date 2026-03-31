@@ -163,7 +163,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.7</div>
+        <div class="sub-info" id="verInfo">v5.2.8</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1440,8 +1440,14 @@ class Shrimp{
       const nm=this instanceof BeeShrimp?'ビー':(this instanceof BlackWhiteShrimp?'白黒':'透明');
       notify('👴 '+nm+'エビが老いてきました…',4000);
     }
-    // 老衰死（寿命超過）
-    if(this.age>=this.lifespan){this.hp=0;}
+    // 老衰死（寿命超過）―― 直接dying状態に遷移してHP回復コードに妨害されないようにする
+    if(this.age>=this.lifespan&&this.alive){
+      this.alive=false;this.dying=true;this.dyingTimer=3;
+      wq=Math.max(0,wq-8);
+      const nm=this instanceof BeeShrimp?'ビー':(this instanceof BlackWhiteShrimp?'白黒':'透明');
+      notify('😢 '+nm+'エビが寿命を全うしました…水質が悪化しています！',4000);
+      return;
+    }
     // 老齢期はHPが自然に少しずつ低下
     if(this.age>this.lifespan*0.7){
       this.hp=Math.max(0,this.hp-0.003*(this.age/this.lifespan)*dt);
@@ -1708,9 +1714,10 @@ class BeeShrimp extends Shrimp{
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.04+Math.sin(time*.5)*.015;
     const eG=ctx.createLinearGradient(-24,0,22,0);eG.addColorStop(0,'rgba(150,220,255,0)');eG.addColorStop(.4,'rgba(150,220,255,1)');eG.addColorStop(.7,'rgba(150,220,255,.5)');eG.addColorStop(1,'rgba(150,220,255,0)');
     ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);
-    // AGING OVERLAY
-    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='rgba(220,220,220,1)';ctx.fillRect(-28,-14,56,28);}
-    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+    // AGING OVERLAY (body clipped)
+    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.save();bodyPath();ctx.clip();ctx.globalAlpha=ageFactor*0.55;ctx.fillStyle='#e0e0e0';ctx.fillRect(-28,-14,56,28);ctx.restore();}
+    ctx.globalAlpha=1;ctx.restore();
   }
 }
 
@@ -1810,9 +1817,10 @@ class BlackWhiteShrimp extends Shrimp{
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.04+Math.sin(time*.5)*.015;
     const eG=ctx.createLinearGradient(-24,0,22,0);eG.addColorStop(0,'rgba(150,220,255,0)');eG.addColorStop(.4,'rgba(150,220,255,1)');eG.addColorStop(.7,'rgba(150,220,255,.5)');eG.addColorStop(1,'rgba(150,220,255,0)');
     ctx.fillStyle=eG;ctx.fillRect(-24,-11,48,5);
-    // AGING OVERLAY
-    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='rgba(220,220,220,1)';ctx.fillRect(-28,-14,56,28);}
-    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+    // AGING OVERLAY (body clipped)
+    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.save();bodyPath();ctx.clip();ctx.globalAlpha=ageFactor*0.55;ctx.fillStyle='#e0e0e0';ctx.fillRect(-28,-14,56,28);ctx.restore();}
+    ctx.globalAlpha=1;ctx.restore();
   }
 }
 
@@ -1899,9 +1907,10 @@ class ClearShrimp extends Shrimp{
       ctx.beginPath();ctx.moveTo(20,.5+a8);ctx.lineTo(22+tO,-.5-co+a8);ctx.stroke();ctx.beginPath();ctx.moveTo(20,1.5+a8);ctx.lineTo(22+tO,2+co+a8);ctx.stroke();}
     // LIGHT
     ctx.globalCompositeOperation='screen';ctx.globalAlpha=.025;ctx.fillStyle='rgba(150,220,255,1)';ctx.fillRect(-24,-10,48,4);
-    // AGING OVERLAY
-    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='rgba(220,220,220,1)';ctx.fillRect(-28,-14,56,28);}
-    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;ctx.restore();
+    ctx.globalCompositeOperation='source-over';ctx.globalAlpha=alpha;
+    // AGING OVERLAY (body clipped)
+    if(this.age>this.lifespan*0.6){const ageFactor=Math.min((this.age-this.lifespan*0.6)/(this.lifespan*0.4),1);ctx.save();bodyPath();ctx.clip();ctx.globalAlpha=ageFactor*0.45;ctx.fillStyle='#e8e8e8';ctx.fillRect(-28,-14,56,28);ctx.restore();}
+    ctx.globalAlpha=1;ctx.restore();
   }
 }
 
