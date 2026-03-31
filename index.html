@@ -163,7 +163,7 @@
           <div class="mt4"><span class="lb">水温</span> <span class="v" id="tempVal">25℃</span></div>
           <div class="wbar"><div class="wbar-fill" id="tempBar"></div></div>
         </div>
-        <div class="sub-info" id="verInfo">v5.2.8</div>
+        <div class="sub-info" id="verInfo">v5.2.9</div>
       </div>
       <div>
         <div class="panel" id="shrimpInfo"></div>
@@ -1413,7 +1413,7 @@ class Shrimp{
     this.eggs=false;this.eggTimer=0;
     this.sick=false;this.sickTimer=0;
     // 寿命: 90〜150分（5400〜9000秒）、水質・水温が良いほど長生き補正あり
-    this.lifespan=rand(5400,9000);
+    this.lifespan=rand(237600,280800);
     this.age=0;
     this._agedNotified=false;
   }
@@ -2640,7 +2640,7 @@ function applySaveData(data){
       s.facing=sd.facing||1;s.state=sd.state||0;
       s.st=0;s.sd=rand(3,8);
       s.age=sd.age||0;
-      s.lifespan=sd.lifespan||rand(5400,9000);
+      s.lifespan=sd.lifespan||rand(237600,280800);
       s._agedNotified=s.age>s.lifespan*0.8;
       shrimps.push(s);
     }
